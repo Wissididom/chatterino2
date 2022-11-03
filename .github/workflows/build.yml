@@ -110,7 +110,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         shell: pwsh
         run: |
-            mkdir build
+            mkdir -p build
             cd build
             cmake .. -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
             cmake --build . --config Release
