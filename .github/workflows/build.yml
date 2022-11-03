@@ -101,6 +101,20 @@ jobs:
           name: chatterino-windows-x86-64-${{ matrix.qt-version }}.zip
           path: build/chatterino-windows-x86-64.zip
 
+      - name: Setup vcpkg (Windows)
+        if: startsWith(matrix.os, 'windows')
+        uses: friendlyanon/setup-vcpkg@v1
+        with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
+
+      - name: Build with vcpkg (Windows)
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+            mkdir build
+            cd build
+            cmake .. -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+            cmake --build . --config Release
+
       - name: Clean Conan pkgs
         if: startsWith(matrix.os, 'windows')
         run: conan remove "*" -fsb
