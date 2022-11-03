@@ -110,7 +110,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         shell: pwsh
         run: |
-            if (-Not Test-Path build) { New-Item build -ItemType Directory }
+            if (-Not (Test-Path build)) { New-Item build -ItemType Directory }
             cd build
             cmake .. -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
             cmake --build . --config Release
