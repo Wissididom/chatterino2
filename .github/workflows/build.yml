@@ -112,6 +112,9 @@ jobs:
         run: |
             if (-Not (Test-Path build)) { New-Item build -ItemType Directory }
             cd build
+            # Remove temporary files from previous build step
+            Remove-Item CMakeCache.txt
+            Remove-Item CMakeFiles -Recurse
             cmake .. -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
             cmake --build . --config Release
 
