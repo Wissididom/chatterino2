@@ -110,7 +110,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         shell: pwsh
         run: |
-            "$env:VCPKG_ROOT/vcpkg" install
+            & "$env:VCPKG_ROOT/vcpkg" install
             if (-Not (Test-Path build)) { New-Item build -ItemType Directory }
             cd build
             # Remove temporary files from previous build step
