@@ -267,7 +267,7 @@ jobs:
       # - name: Read upload URL into output
       #   id: upload_url
       #   run: |
-      #     echo "::set-output name=upload_url::$(cat release-upload-url.txt/release-upload-url.txt)"
+      #     echo "upload_url=$(cat release-upload-url.txt/release-upload-url.txt)" >> $GITHUB_OUTPUT
 
       - name: Upload release asset (Windows)
         uses: actions/upload-release-asset@v1.0.2
