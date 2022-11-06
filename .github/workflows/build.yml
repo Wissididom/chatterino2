@@ -226,12 +226,13 @@ jobs:
   create-release:
     needs: build
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    # if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
 
     steps:
       - name: Create release
         id: create_release
-        uses: pajlada/create-release@v2.0.3
+        # uses: pajlada/create-release@v2.0.3
+        uses: Wissididom/create-release@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
