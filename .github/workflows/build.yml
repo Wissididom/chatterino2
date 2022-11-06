@@ -224,7 +224,7 @@ jobs:
           path: build/chatterino-osx.dmg
 
   create-release:
-    # needs: build
+    needs: build
     runs-on: ubuntu-latest
     # if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
 
