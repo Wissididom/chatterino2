@@ -164,12 +164,12 @@ jobs:
             sh ./../.CI/CreateAppImage.sh
         shell: bash
 
-      - name: Package - .deb (Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-            cd build
-            sh ./../.CI/CreateUbuntuDeb.sh
-        shell: bash
+      #- name: Package - .deb (Ubuntu)
+        #if: startsWith(matrix.os, 'ubuntu')
+        #run: |
+        #    cd build
+        #    sh ./../.CI/CreateUbuntuDeb.sh
+        #shell: bash
 
       - name: Upload artifact - AppImage (Ubuntu)
         if: startsWith(matrix.os, 'ubuntu')
