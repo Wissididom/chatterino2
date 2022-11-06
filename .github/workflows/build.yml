@@ -253,10 +253,10 @@ jobs:
           name: Chatterino-x86_64-5.15.2.AppImage
           path: linux/
 
-      - uses: actions/download-artifact@v3
-        with:
-          name: Chatterino-5.15.2.deb
-          path: ubuntu/
+      #- uses: actions/download-artifact@v3
+      #  with:
+      #    name: Chatterino-5.15.2.deb
+      #    path: ubuntu/
 
       - uses: actions/download-artifact@v3
         with:
