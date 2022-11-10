@@ -161,7 +161,7 @@ if (BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif ()
 
-install(TARGETS chatterino2
+install(TARGETS src
     COMPONENT Chatterino
     RUNTIME DESTINATION "/usr/"
     LIBRARY DESTINATION "/usr/"
