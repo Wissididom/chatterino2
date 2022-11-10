@@ -161,15 +161,4 @@ if (BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif ()
 
-install(TARGETS src
-    COMPONENT Chatterino
-    RUNTIME DESTINATION "/usr/"
-    LIBRARY DESTINATION "/usr/"
-    DESTINATION "/usr/"
-)
-
-SET(CPACK_GENERATOR "DEB")
-SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chatterino") #required
-INCLUDE(CPack)
-
 feature_summary(WHAT ALL)
