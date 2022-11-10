@@ -171,6 +171,7 @@ jobs:
             cpack
             dpkg -I chatterino-2.3.5-Linux.deb
             dpkg -c chatterino-2.3.5-Linux.deb
+            mv chatterino-2.3.5-Linux.deb Chatterino-x86_64.deb
         shell: bash
 
       - name: Upload artifact - AppImage (Ubuntu)
