@@ -168,7 +168,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
             cd build
-            sh ./../.CI/CreateUbuntuDeb.sh
+            cpack
         shell: bash
 
       - name: Upload artifact - AppImage (Ubuntu)
