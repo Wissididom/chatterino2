@@ -819,3 +819,14 @@ else ()
         )
     endif()
 endif ()
+
+install(TARGETS ${LIBRARY_PROJECT}
+    COMPONENT Chatterino
+    RUNTIME DESTINATION "/usr/"
+    LIBRARY DESTINATION "/usr/"
+    DESTINATION "/usr/"
+)
+
+SET(CPACK_GENERATOR "DEB")
+SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chatterino") #required
+INCLUDE(CPack)
