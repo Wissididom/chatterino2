@@ -834,7 +834,7 @@ SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://chatterino.com")
 SET(CPACK_PACKAGE_VERSION_MAJOR "2")
 SET(CPACK_PACKAGE_VERSION_MINOR "3")
 SET(CPACK_PACKAGE_VERSION_PATCH "5")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt5multimedia5, libqt5widgets5, libqt5gui5, libqt5network5, libboost-filesystem1.71.0, libqt5dbus5, libglib2.0-0, libssl1.1, libstdc++6, libgcc1, libc-bin, libpulse0, libgl1, libpng16-16, zlib1g, libharfbuzz0b, libdbus-1-3, libicu66, libpcre++0v5, libdouble-conversion3, libxcb1, libpulse0, libfreetype6, libgraphite2-3, libsystemd0, libwrap0, libsndfile1, libasyncns0, liblzma5, libgcrypt20, libflac8, libogg0, libvorbis0a, libvorbisenc2, libgpg-error0, libbsd0")
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt5core5a, libqt5multimedia5, libqt5widgets5, libqt5gui5, libqt5network5, libboost-filesystem1.71.0, libqt5dbus5, libglib2.0-0, libssl1.1, libstdc++6, libgcc1, libc-bin, libpulse0, libgl1, libpng16-16, zlib1g, libharfbuzz0b, libdbus-1-3, libicu66, libpcre++0v5, libdouble-conversion3, libxcb1, libpulse0, libfreetype6, libgraphite2-3, libsystemd0, libwrap0, libsndfile1, libasyncns0, liblzma5, libgcrypt20, libflac8, libogg0, libvorbis0a, libvorbisenc2, libgpg-error0, libbsd0")
 SET(CPACK_PACKAGE_DESCRIPTION "Testing out chatterino as a Ubuntu package")
 SET(CPACK_PACKAGE_CONTACT "Chatterino https://github.com/chatterino/chatterino2 https://discord.gg/rabs2GZd8b ")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chatterino") #required
