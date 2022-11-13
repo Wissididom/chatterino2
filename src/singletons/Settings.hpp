@@ -224,6 +224,7 @@ public:
     BoolSetting enableFFZChannelEmotes = {"/emotes/ffz/channel", true};
     BoolSetting enableSevenTVGlobalEmotes = {"/emotes/seventv/global", true};
     BoolSetting enableSevenTVChannelEmotes = {"/emotes/seventv/channel", true};
+    BoolSetting enableSevenTVEventAPI = {"/emotes/seventv/eventapi", true};
 
     /// Links
     BoolSetting linksDoubleClickOnly = {"/links/doubleClickToOpen", false};
@@ -242,6 +243,8 @@ public:
         "/streamerMode/hideLinkThumbnails", true};
     BoolSetting streamerModeHideViewerCountAndDuration = {
         "/streamerMode/hideViewerCountAndDuration", false};
+    BoolSetting streamerModeHideModActions = {"/streamerMode/hideModActions",
+                                              true};
     BoolSetting streamerModeMuteMentions = {"/streamerMode/muteMentions", true};
     BoolSetting streamerModeSuppressLiveNotifications = {
         "/streamerMode/supressLiveNotifications", false};
@@ -428,6 +431,14 @@ public:
         "/misc/twitch/messageHistoryLimit",
         800,
     };
+    IntSetting scrollbackSplitLimit = {
+        "/misc/scrollback/splitLimit",
+        1000,
+    };
+    IntSetting scrollbackUsercardLimit = {
+        "/misc/scrollback/usercardLimit",
+        1000,
+    };
 
     // Temporary time-gate-overrides
     EnumSetting<HelixTimegateOverride> helixTimegateRaid = {
@@ -440,6 +451,15 @@ public:
     };
     EnumSetting<HelixTimegateOverride> helixTimegateVIPs = {
         "/misc/twitch/helix-timegate/vips",
+        HelixTimegateOverride::Timegate,
+    };
+    EnumSetting<HelixTimegateOverride> helixTimegateModerators = {
+        "/misc/twitch/helix-timegate/moderators",
+        HelixTimegateOverride::Timegate,
+    };
+
+    EnumSetting<HelixTimegateOverride> helixTimegateCommercial = {
+        "/misc/twitch/helix-timegate/commercial",
         HelixTimegateOverride::Timegate,
     };
 

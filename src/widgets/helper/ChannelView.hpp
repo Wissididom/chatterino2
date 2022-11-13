@@ -71,7 +71,8 @@ public:
     };
 
     explicit ChannelView(BaseWidget *parent = nullptr, Split *split = nullptr,
-                         Context context = Context::None);
+                         Context context = Context::None,
+                         size_t messagesLimit = 1000);
 
     void queueUpdate();
     Scrollbar &getScrollBar();
@@ -301,7 +302,7 @@ private:
     QTimer scrollTimer_;
 
     // We're only interested in the pointer, not the contents
-    MessageLayout *highlightedMessage_;
+    MessageLayout *highlightedMessage_ = nullptr;
     QVariantAnimation highlightAnimation_;
     void setupHighlightAnimationColors();
 

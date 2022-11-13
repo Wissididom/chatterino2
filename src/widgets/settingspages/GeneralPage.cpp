@@ -387,6 +387,8 @@ void GeneralPage::initLayout(GeneralPageView &layout)
     layout.addCheckbox("Show FFZ channel emotes", s.enableFFZChannelEmotes);
     layout.addCheckbox("Show 7TV global emotes", s.enableSevenTVGlobalEmotes);
     layout.addCheckbox("Show 7TV channel emotes", s.enableSevenTVChannelEmotes);
+    layout.addCheckbox("Enable 7TV live emote updates (requires restart)",
+                       s.enableSevenTVEventAPI);
 
     layout.addTitle("Streamer Mode");
     layout.addDescription(
@@ -416,6 +418,7 @@ void GeneralPage::initLayout(GeneralPageView &layout)
     layout.addCheckbox(
         "Hide viewer count and stream length while hovering over split header",
         s.streamerModeHideViewerCountAndDuration);
+    layout.addCheckbox("Hide moderation actions", s.streamerModeHideModActions);
     layout.addCheckbox("Mute mention sounds", s.streamerModeMuteMentions);
     layout.addCheckbox("Suppress Live Notifications",
                        s.streamerModeSuppressLiveNotifications);
@@ -699,7 +702,7 @@ void GeneralPage::initLayout(GeneralPageView &layout)
                        s.mentionUsersWithComma);
     layout.addCheckbox("Show joined users (< 1000 chatters)", s.showJoins);
     layout.addCheckbox("Show parted users (< 1000 chatters)", s.showParts);
-    layout.addCheckbox("Automatically close user popup when it loses focus",
+    layout.addCheckbox("Automatically close usercard when it loses focus",
                        s.autoCloseUserPopup);
     layout.addCheckbox(
         "Automatically close reply thread popup when it loses focus",
@@ -765,6 +768,11 @@ void GeneralPage::initLayout(GeneralPageView &layout)
     // TODO: Change phrasing to use better english once we can tag settings, right now it's kept as history instead of historical so that the setting shows up when the user searches for history
     layout.addIntInput("Max number of history messages to load on connect",
                        s.twitchMessageHistoryLimit, 10, 800, 10);
+
+    layout.addIntInput("Split message scrollback limit (requires restart)",
+                       s.scrollbackSplitLimit, 100, 100000, 100);
+    layout.addIntInput("Usercard scrollback limit (requires restart)",
+                       s.scrollbackUsercardLimit, 100, 100000, 100);
 
     layout.addCheckbox("Enable experimental IRC support (requires restart)",
                        s.enableExperimentalIrc);
@@ -854,6 +862,28 @@ void GeneralPage::initLayout(GeneralPageView &layout)
             false);
     helixTimegateVIPs->setMinimumWidth(
         helixTimegateVIPs->minimumSizeHint().width());
+
+    auto *helixTimegateCommercial =
+        layout.addDropdown<std::underlying_type<HelixTimegateOverride>::type>(
+            "Helix timegate /commercial behaviour",
+            {"Timegate", "Always use IRC", "Always use Helix"},
+            s.helixTimegateCommercial,
+            helixTimegateGetValue,  //
+            helixTimegateSetValue,  //
+            false);
+    helixTimegateCommercial->setMinimumWidth(
+        helixTimegateCommercial->minimumSizeHint().width());
+
+    auto *helixTimegateModerators =
+        layout.addDropdown<std::underlying_type<HelixTimegateOverride>::type>(
+            "Helix timegate /mods behaviour",
+            {"Timegate", "Always use IRC", "Always use Helix"},
+            s.helixTimegateModerators,
+            helixTimegateGetValue,  //
+            helixTimegateSetValue,  //
+            false);
+    helixTimegateModerators->setMinimumWidth(
+        helixTimegateModerators->minimumSizeHint().width());
 
     layout.addStretch();
 
