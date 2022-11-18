@@ -223,6 +223,22 @@ jobs:
           name: chatterino-osx-${{ matrix.qt-version }}.dmg
           path: build/chatterino-osx.dmg
 
+  update-release-source:
+    needs: build
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: nightly-build
+          submodules: recursive
+      - run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -m 'moving nightly-build to new commit' -f -a nightly-build
+          git push -f origin refs/tags/my_tag
+
   create-release:
     needs: build
     runs-on: ubuntu-latest
