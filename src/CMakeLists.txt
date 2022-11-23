@@ -854,7 +854,7 @@ SET(CPACK_PACKAGE_VERSION_MAJOR "2")
 SET(CPACK_PACKAGE_VERSION_MINOR "3")
 SET(CPACK_PACKAGE_VERSION_PATCH "5")
 SET(CPACK_PACKAGE_DESCRIPTION "Testing out chatterino as a Ubuntu package")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "qttools5-dev qtmultimedia5-dev qt5-image-formats-plugins libqt5svg5-dev libboost-dev libssl-dev libboost-system-dev libboost-filesystem-dev")
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS "qttools5-dev, qtmultimedia5-dev, qt5-image-formats-plugins, libqt5svg5-dev, libboost-dev, libssl-dev, libboost-system-dev, libboost-filesystem-dev, cmake, g++")
 SET(CPACK_PACKAGE_CONTACT "Chatterino https://github.com/chatterino/chatterino2 https://discord.gg/rabs2GZd8b ")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chatterino") #required
 INCLUDE(CPack)
