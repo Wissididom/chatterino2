@@ -853,7 +853,7 @@ SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://chatterino.com")
 SET(CPACK_PACKAGE_VERSION_MAJOR "2")
 SET(CPACK_PACKAGE_VERSION_MINOR "3")
 SET(CPACK_PACKAGE_VERSION_PATCH "5")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt5core5a, libqt5multimedia5, libqt5widgets5, libqt5gui5, libqt5network5, libqt5dbus5, libboost-filesystem1.71.0, libglib2.0-0, libssl1.1, libstdc++6, libgcc1, libc-bin, libxcb1, qt5-image-formats-plugins")
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS "qttools5-dev qtmultimedia5-dev qt5-image-formats-plugins libqt5svg5-dev libboost-dev libssl-dev libboost-system-dev libboost-filesystem-dev")
 SET(CPACK_PACKAGE_DESCRIPTION "Testing out chatterino as a Ubuntu package")
 SET(CPACK_PACKAGE_CONTACT "Chatterino https://github.com/chatterino/chatterino2 https://discord.gg/rabs2GZd8b ")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chatterino") #required
