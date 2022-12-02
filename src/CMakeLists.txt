@@ -854,7 +854,7 @@ SET(CPACK_PACKAGE_VERSION_MAJOR "2")
 SET(CPACK_PACKAGE_VERSION_MINOR "3")
 SET(CPACK_PACKAGE_VERSION_PATCH "5")
 SET(CPACK_PACKAGE_DESCRIPTION "Testing out chatterino as a Ubuntu package")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "qttools5-dev, qtmultimedia5-dev, qt5-image-formats-plugins, libqt5svg5-dev, libboost-dev, libssl-dev, libboost-system-dev, libboost-filesystem-dev, libqt5core5a")
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS "rapidjson-dev, libfuse2, libssl-dev, libboost-dev, libxcb-randr0-dev, libbost-system-dev, libboost-filesystem-dev, libxkbcommon-x11-0, libgstreamer-plugins-base1.0-0, libgl1-mesa-dev, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-render-util0, libxcb-xinerama0")
 SET(CPACK_PACKAGE_CONTACT "Chatterino https://github.com/chatterino/chatterino2 https://discord.gg/rabs2GZd8b ")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chatterino") #required
 INCLUDE(CPack)
