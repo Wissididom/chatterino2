@@ -844,15 +844,33 @@ install(TARGETS ${LIBRARY_PROJECT}
     DESTINATION "/usr/"
 )
 
+#
+# Make a version file containing the current version from git. (Source: https://github.com/josefcibulka/version_git/blob/master/CMakeLists.txt)
+#
+if(EXISTS "${PROJECT_SOURCE_DIR}/versionForSourcePackage.cmake")
+  include("${PROJECT_SOURCE_DIR}/versionForSourcePackage.cmake")
+else()
+  include(GetGitRevisionDescription)
+  git_describe(VERSION --tags --dirty=-dirty 2>/dev/null | cut -c 2-)
+endif()
+
+#parse the version information into pieces.
+string(REGEX REPLACE "^v([0-9]+)\\..*" "\\1" VERSION_MAJOR "${VERSION}")
+string(REGEX REPLACE "^v[0-9]+\\.([0-9]+).*" "\\1" VERSION_MINOR "${VERSION}")
+string(REGEX REPLACE "^v[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1" VERSION_PATCH "${VERSION}")
+string(REGEX REPLACE "^v[0-9]+\\.[0-9]+\\.[0-9]+(.*)" "\\1" VERSION_SHA1 "${VERSION}")
+set(VERSION_SHORT "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
 SET(CPACK_DEBIAN_PACKAGE_NAME "chatterino2")
 SET(CPACK_DEBIAN_PACKAGE_SECTION "net")
-SET(CPACK_DEBIAN_PACKAGE_PRIORIY "optional")
+SET(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
 SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://chatterino.com")
-SET(CPACK_PACKAGE_VERSION_MAJOR "2")
-SET(CPACK_PACKAGE_VERSION_MINOR "3")
-SET(CPACK_PACKAGE_VERSION_PATCH "5")
+SET(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
+SET(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
+SET(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
+SET(CPACK_PACKAGE_VERSION "${VERSION_SHORT}-dev")
 SET(CPACK_PACKAGE_DESCRIPTION "Testing out chatterino as a Ubuntu package")
 SET(CPACK_DEBIAN_PACKAGE_DEPENDS "rapidjson-dev, libfuse2, libssl-dev, libboost-dev, libxcb-randr0-dev, libbost-system-dev, libboost-filesystem-dev, libxkbcommon-x11-0, libgstreamer-plugins-base1.0-0, libgl1-mesa-dev, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-render-util0, libxcb-xinerama0")
 SET(CPACK_PACKAGE_CONTACT "Chatterino https://github.com/chatterino/chatterino2 https://discord.gg/rabs2GZd8b ")
