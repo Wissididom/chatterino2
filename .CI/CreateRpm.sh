@@ -58,7 +58,7 @@ Name: chatterino
 Version: $chatterino_version
 Release: $chatterino_version
 License: MIT
-Summery: RPM package built for $ubuntu_release
+Summary: RPM package built for $ubuntu_release
 URL: https://chatterino.com
 Requires: $dependencies
 EOF
