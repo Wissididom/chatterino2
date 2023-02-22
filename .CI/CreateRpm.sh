@@ -54,6 +54,7 @@ breakline
 
 echo "Merge install into packaging dir"
 mkdir -p "$packaging_dir/BUILDROOT"
+find "$install_prefix"
 cp -rv "$install_prefix/" "$packaging_dir/BUILDROOT"
 find "$packaging_dir"
 breakline
