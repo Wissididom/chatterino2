@@ -272,7 +272,7 @@ jobs:
         id: rpm
         uses: naveenrajm7/rpmbuild@master
         with:
-          spec_file: "package/SPECS/chatterino.spec"
+          spec_file: "build/package/SPECS/chatterino.spec"
 
       - name: Package - AppImage (Ubuntu)
         if: startsWith(matrix.os, 'ubuntu-20.04') && matrix.skip_artifact != 'yes'
