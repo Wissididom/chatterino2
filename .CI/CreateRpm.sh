@@ -9,31 +9,16 @@ breakline() {
 # Configured in the CI step
 install_prefix="appdir/usr"
 
-# The directory we finally pack into our .deb package
-packaging_dir="package"
+# The directory we finally pack into our .rpm package
+packaging_dir="rpm"
 
 # Get the Ubuntu Release (e.g. 20.04 or 22.04)
 ubuntu_release="$(lsb_release -rs)"
 
-# The final path where we'll save the .deb package
-deb_path="Chatterino-ubuntu-${ubuntu_release}-x86_64.deb"
+# The final path where we'll save the .rpm package
+rpm_path="Chatterino-fedora-${ubuntu_release}-x86_64.rpm"
 
-# Refactor opportunity:
-case "$ubuntu_release" in
-    20.04)
-        dependencies="libc6, libstdc++6, libqt5core5a, libqt5concurrent5, libqt5dbus5, libqt5gui5, libqt5network5, libqt5svg5, libqt5widgets5, qt5-image-formats-plugins, libboost-filesystem1.71.0"
-        ;;
-    22.04)
-        dependencies="libc6, libstdc++6, libqt5core5a, libqt5concurrent5, libqt5dbus5, libqt5gui5, libqt5network5, libqt5svg5, libqt5widgets5, qt5-image-formats-plugins, libboost-filesystem1.74.0"
-        ;;
-    *)
-        echo "Unsupported Ubuntu release $ubuntu_release"
-        exit 1
-        ;;
-esac
-
-echo "Building Ubuntu .deb file on '$ubuntu_release'"
-echo "Dependencies: $dependencies"
+echo "Building .rpm file on '$ubuntu_release'"
 
 if [ ! -f ./bin/chatterino ] || [ ! -x ./bin/chatterino ]; then
     echo "ERROR: No chatterino binary file found. This script must be run in the build folder, and chatterino must be built first."
@@ -58,23 +43,26 @@ Name: chatterino
 Version: $chatterino_version
 Release: $chatterino_version
 License: MIT
-Summary: RPM package built for $ubuntu_release
+Summary: RPM package built on $ubuntu_release
 URL: https://chatterino.com
 Requires: $dependencies
 
 %description
-RPM package built for $ubuntu_release
+Chatterino RPM package built on $ubuntu_release
 EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
-
-echo "Running make install"
-make install
-find "$install_prefix"
+echo "Install RPM"
+apt install rpm
 breakline
 
+echo "Build RPM"
+rpmbuild -ba --build-in-place --define "_topdir $(pwd)/rpm" chatterino.spec
+breakline
 
-echo "Merge install into packaging dir"
-cp -rv "$install_prefix/" "$packaging_dir/"
-find "$packaging_dir"
+echo "Running make install"
+mv rpm/RPMS/*/*.rpm .
+breakline
+
+ls -la *.rpm
