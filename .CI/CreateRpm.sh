@@ -41,6 +41,7 @@ echo "Making control file"
 cat >> "$packaging_dir/SPECS/chatterino.spec" << EOF
 Name: chatterino
 Version: $chatterino_version
+Release: $chatterino_version
 License: MIT
 Summary: RPM package built on $ubuntu_release
 URL: https://chatterino.com
