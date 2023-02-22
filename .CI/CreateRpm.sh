@@ -41,7 +41,6 @@ echo "Making control file"
 cat >> "$packaging_dir/SPECS/chatterino.spec" << EOF
 Name: chatterino
 Version: $chatterino_version
-Release: $chatterino_version
 License: MIT
 Summary: RPM package built on $ubuntu_release
 URL: https://chatterino.com
@@ -53,6 +52,12 @@ EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
+echo "Merge install into packaging dir"
+mkdir -p "$packaging_dir/BUILDROOT"
+cp -rv "$install_prefix/" "$packaging_dir/BUILDROOT"
+find "$packaging_dir"
+breakline
+
 echo "Install RPM"
 sudo apt install rpm
 breakline
@@ -61,8 +66,8 @@ echo "Build RPM"
 rpmbuild -ba --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
-echo "Running make install"
-mv rpm/RPMS/*/*.rpm .
+echo "Move RPM up"
+mv "$(pwd)/rpm/RPMS/*/*.rpm" .
 breakline
 
 ls -la *.rpm
