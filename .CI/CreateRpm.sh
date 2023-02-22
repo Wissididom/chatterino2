@@ -44,7 +44,7 @@ chatterino_version=$(git describe 2>/dev/null) || true
 if [ "$(echo "$chatterino_version" | cut -c1-1)" = 'v' ]; then
     chatterino_version="$(echo "$chatterino_version" | cut -c2-)"
 else
-    chatterino_version="0.0.0-dev"
+    chatterino_version="0.0.0"
 fi
 
 # Make sure no old remnants of a previous packaging remains
