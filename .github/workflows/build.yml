@@ -262,17 +262,11 @@ jobs:
             clang-tidy-review-output.json
             clang-tidy-review-metadata.json
 
-      - name: Prepare RPM (Ubuntu)
+      - name: Build RPM (Ubuntu)
         if: startsWith(matrix.os, 'ubuntu') && matrix.skip_artifact != 'yes'
         run: |
           cd build
           sh ./../.CI/CreateRpm.sh
-      - name: Build RPM (Docker on Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu') && matrix.skip_artifact != 'yes'
-        id: rpm
-        uses: Wissididom/rpmbuild@develop
-        with:
-          spec_file: "build/package/SPECS/chatterino.spec"
 
       - name: Package - AppImage (Ubuntu)
         if: startsWith(matrix.os, 'ubuntu-20.04') && matrix.skip_artifact != 'yes'
