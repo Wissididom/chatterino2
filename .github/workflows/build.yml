@@ -270,7 +270,7 @@ jobs:
       - name: Build RPM (Docker on Ubuntu)
         if: startsWith(matrix.os, 'ubuntu') && matrix.skip_artifact != 'yes'
         id: rpm
-        uses: naveenrajm7/rpmbuild@master
+        uses: Wissididom/rpmbuild@develop
         with:
           spec_file: "build/package/SPECS/chatterino.spec"
 
