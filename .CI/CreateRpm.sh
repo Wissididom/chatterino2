@@ -54,7 +54,7 @@ cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
 echo "Install RPM"
-apt install rpm
+sudo apt install rpm
 breakline
 
 echo "Build RPM"
