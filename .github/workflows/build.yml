@@ -262,12 +262,6 @@ jobs:
             clang-tidy-review-output.json
             clang-tidy-review-metadata.json
 
-      - name: Build RPM (Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu') && matrix.skip_artifact != 'yes'
-        run: |
-          cd build
-          sh ./../.CI/CreateRpm.sh
-
       - name: Package - AppImage (Ubuntu)
         if: startsWith(matrix.os, 'ubuntu-20.04') && matrix.skip_artifact != 'yes'
         run: |
@@ -281,6 +275,12 @@ jobs:
           cd build
           sh ./../.CI/CreateUbuntuDeb.sh
         shell: bash
+
+      - name: Build RPM (Ubuntu)
+        if: startsWith(matrix.os, 'ubuntu') && matrix.skip_artifact != 'yes'
+        run: |
+          cd build
+          sh ./../.CI/CreateRpm.sh
 
       - name: Upload artifact - AppImage (Ubuntu)
         if: startsWith(matrix.os, 'ubuntu-20.04') && matrix.skip_artifact != 'yes'
