@@ -58,7 +58,7 @@ apt install rpm
 breakline
 
 echo "Build RPM"
-rpmbuild -ba --build-in-place --define "_topdir $(pwd)/rpm" chatterino.spec
+rpmbuild -ba --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
 echo "Running make install"
