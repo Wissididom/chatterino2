@@ -45,7 +45,7 @@ Release: $chatterino_version
 License: MIT
 Summary: RPM package built on $ubuntu_release
 URL: https://chatterino.com
-Requires: $dependencies
+Requires: qt5-qtbase-devel qt5-imageformats qt5-qtsvg-devel qt5-linguist libsecret-devel openssl-devel boost-devel
 
 %description
 Chatterino RPM package built on $ubuntu_release
