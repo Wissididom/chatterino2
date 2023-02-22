@@ -50,7 +50,7 @@ fi
 # Make sure no old remnants of a previous packaging remains
 rm -vrf "$packaging_dir"
 
-mkdir -p "$packaging_dir/DEBIAN"
+mkdir -p "$packaging_dir/SPECS"
 
 echo "Making control file"
 cat >> "$packaging_dir/SPECS/chatterino.spec" << EOF
