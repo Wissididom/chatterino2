@@ -61,6 +61,9 @@ License: MIT
 Summary: RPM package built for $ubuntu_release
 URL: https://chatterino.com
 Requires: $dependencies
+
+%description
+RPM package built for $ubuntu_release
 EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
