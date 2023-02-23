@@ -68,6 +68,8 @@ echo "Build RPM"
 rpmbuild -ba --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
+tree "$(pwd)/rpm"
+
 echo "Move RPM up"
 mv "$(pwd)/rpm/RPMS/*.rpm" .
 breakline
