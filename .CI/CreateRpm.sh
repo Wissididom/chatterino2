@@ -60,25 +60,17 @@ EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
-#echo "Merge install into packaging dir"
-#mkdir -p "$packaging_dir/BUILDROOT"
-#find "$install_prefix"
-#cp -rv "$install_prefix/" "$packaging_dir/BUILDROOT"
-#find "$packaging_dir"
-#breakline
-
-echo "Install RPM"
-sudo apt install rpm
-breakline
-
 echo "Build RPM"
-rpmbuild -vv -ba --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec" # full build
+rpmbuild -vv -ba --build-in-place --define "_topdir $(pwd)/$packaging_dir" "$packaging_dir/SPECS/chatterino.spec" # full build
 breakline
 
-tree "$(pwd)/rpm"
+mv "$(pwd)/$packaging_dir/*/home/runner/work/chatterino2/chatterino2/build/appdir/*" "$(pwd)/$packaging_dir"
+rm -r "$(pwd)/$packaging_dir/*/home"
+
+tree "$(pwd)/$packaging_dir"
 
 echo "Move RPM up"
-mv "$(pwd)/rpm/RPMS/*.rpm" .
+mv "$(pwd)/$packaging_dir/RPMS/*.rpm" .
 breakline
 
 ls -la *.rpm
