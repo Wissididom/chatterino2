@@ -72,6 +72,6 @@ echo "Move RPM up"
 mv "$(pwd)/$packaging_dir/RPMS/x86_64/chatterino-$chatterino_version-$chatterino_version.x86_64.rpm" .
 breakline
 
-mv "chatterino-$chatterino_version-$chatterino_version.x86_64.rpm" "Chatterino.rpm"
+mv "chatterino-$chatterino_version-$chatterino_version.x86_64.rpm" "$rpm_path"
 
 ls -la
