@@ -53,15 +53,14 @@ Chatterino RPM package built on $ubuntu_release
 %build
 make -j"$(nproc)"
 %make_install
+mv "$(pwd)/$packaging_dir/*/home/runner/work/chatterino2/chatterino2/build/appdir/*" "$(pwd)/$packaging_dir"
+rm -r "$(pwd)/$packaging_dir/*/home"
 
 %files
 /usr/
 EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
-
-mv "$(pwd)/$packaging_dir/*/home/runner/work/chatterino2/chatterino2/build/appdir/*" "$(pwd)/$packaging_dir"
-rm -r "$(pwd)/$packaging_dir/*/home"
 
 echo "Build RPM"
 rpmbuild -vv -ba --build-in-place --define "_topdir $(pwd)/$packaging_dir" "$packaging_dir/SPECS/chatterino.spec" # full build
