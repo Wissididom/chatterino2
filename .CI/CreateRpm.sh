@@ -69,7 +69,7 @@ rpmbuild -ba --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPEC
 breakline
 
 echo "Move RPM up"
-mv "$(pwd)/rpm/RPMS/*/*.rpm" .
+mv "$(pwd)/rpm/RPMS/*.rpm" .
 breakline
 
 ls -la *.rpm
