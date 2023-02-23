@@ -16,7 +16,7 @@ packaging_dir="rpm"
 ubuntu_release="$(lsb_release -rs)"
 
 # The final path where we'll save the .rpm package
-rpm_path="Chatterino-${ubuntu_release}-x86_64.rpm"
+rpm_path="Chatterino-ubuntu-${ubuntu_release}-x86_64.rpm"
 
 echo "Building .rpm file on '$ubuntu_release'"
 
