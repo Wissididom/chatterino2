@@ -54,7 +54,6 @@ Chatterino RPM package built on $ubuntu_release
 make -j"$(nproc)"
 %make_install
 mv "$(pwd)/$packaging_dir/BUILDROOT/chatterino-$chatterino_version-$chatterino_version.x86_64/home/runner/work/chatterino2/chatterino2/build/appdir" "$(pwd)/$packaging_dir/BUILDROOT/chatterino-$chatterino_version-$chatterino_version.x86_64"
-rm -r "$(pwd)/$packaging_dir/chatterino-$chatterino_version-$chatterino_version.x86_64/home"
 
 %files
 /usr/
