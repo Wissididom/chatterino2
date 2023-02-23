@@ -277,7 +277,7 @@ jobs:
         shell: bash
 
       - name: Build RPM (Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu') && matrix.skip_artifact != 'yes'
+        if: startsWith(matrix.os, 'ubuntu-22.04') && matrix.skip_artifact != 'yes'
         run: |
           cd build
           sh ./../.CI/CreateRpm.sh
@@ -297,7 +297,7 @@ jobs:
           path: build/Chatterino-${{ matrix.os }}-x86_64.deb
 
       - name: Upload artifact - .rpm (Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu') && matrix.skip_artifact != 'yes'
+        if: startsWith(matrix.os, 'ubuntu-22.04') && matrix.skip_artifact != 'yes'
         uses: actions/upload-artifact@v3
         with:
           name: Chatterino-${{ matrix.os }}-Qt-${{ matrix.qt-version }}.rpm
