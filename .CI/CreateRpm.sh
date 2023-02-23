@@ -53,6 +53,9 @@ Chatterino RPM package built on $ubuntu_release
 %build
 make -j"$(nproc)"
 %make_install
+
+%files
+/usr/
 EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
