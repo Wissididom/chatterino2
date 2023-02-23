@@ -69,7 +69,7 @@ breakline
 tree "$(pwd)/$packaging_dir"
 
 echo "Move RPM up"
-mv "$(pwd)/$packaging_dir/RPMS/*/*.rpm" .
+mv "$(pwd)/$packaging_dir/RPMS/x86_64/chatterino-$chatterino_version-$chatterino_version.x86_64.rpm" .
 breakline
 
 ls -la *.rpm
