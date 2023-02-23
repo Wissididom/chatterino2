@@ -301,7 +301,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Chatterino-${{ matrix.os }}-Qt-${{ matrix.qt-version }}.rpm
-          path: build/Chatterino.rpm
+          path: build/Chatterino-${{ matrix.os }}-x86_64.rpm
 
       # MACOS
       - name: Install dependencies (MacOS)
