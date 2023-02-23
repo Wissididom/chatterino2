@@ -50,7 +50,7 @@ Requires: qt5-qtbase-devel qt5-imageformats qt5-qtsvg-devel qt5-linguist libsecr
 %description
 Chatterino RPM package built on $ubuntu_release
 
-%install
+%build
 make -j"$(nproc)"
 make install DESTDIR=$RPM_BUILD_ROOT
 EOF
