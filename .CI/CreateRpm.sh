@@ -69,7 +69,7 @@ breakline
 tree "$(pwd)/$packaging_dir"
 
 echo "Move RPM up"
-mv "$(pwd)/$packaging_dir/RPMS/*.rpm" .
+mv "$(pwd)/$packaging_dir/RPMS/*/*.rpm" .
 breakline
 
 ls -la *.rpm
