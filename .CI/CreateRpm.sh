@@ -50,25 +50,26 @@ Requires: qt5-qtbase-devel qt5-imageformats qt5-qtsvg-devel qt5-linguist libsecr
 %description
 Chatterino RPM package built on $ubuntu_release
 
-%files
-/../usr
+%install
+make -j"$(nproc)"
+make install DESTDIR=$RPM_BUILD_ROOT
 EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
-echo "Merge install into packaging dir"
-mkdir -p "$packaging_dir/BUILDROOT"
-find "$install_prefix"
-cp -rv "$install_prefix/" "$packaging_dir/BUILDROOT"
-find "$packaging_dir"
-breakline
+#echo "Merge install into packaging dir"
+#mkdir -p "$packaging_dir/BUILDROOT"
+#find "$install_prefix"
+#cp -rv "$install_prefix/" "$packaging_dir/BUILDROOT"
+#find "$packaging_dir"
+#breakline
 
 echo "Install RPM"
 sudo apt install rpm
 breakline
 
 echo "Build RPM"
-rpmbuild -vv -ba --buildroot="$(pwd)/rpm/BUILDROOT" --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec" # full build
+rpmbuild -vv -ba --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec" # full build
 breakline
 
 tree "$(pwd)/rpm"
