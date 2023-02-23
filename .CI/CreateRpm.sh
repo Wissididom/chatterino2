@@ -65,7 +65,8 @@ sudo apt install rpm
 breakline
 
 echo "Build RPM"
-rpmbuild -ba --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec"
+# rpmbuild -vv -ba --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec" # full build
+rpmbuild -vv -bb --build-in-place --define "_topdir $(pwd)/rpm" "$packaging_dir/SPECS/chatterino.spec" # binary Build
 breakline
 
 tree "$(pwd)/rpm"
