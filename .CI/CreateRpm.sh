@@ -51,7 +51,7 @@ Requires: qt5-qtbase-devel qt5-imageformats qt5-qtsvg-devel qt5-linguist libsecr
 Chatterino RPM package built on $ubuntu_release
 
 %files
-/usr/*
+../usr/*
 EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
