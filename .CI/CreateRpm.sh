@@ -60,12 +60,12 @@ EOF
 cat "$packaging_dir/SPECS/chatterino.spec"
 breakline
 
+mv "$(pwd)/$packaging_dir/*/home/runner/work/chatterino2/chatterino2/build/appdir/*" "$(pwd)/$packaging_dir"
+rm -r "$(pwd)/$packaging_dir/*/home"
+
 echo "Build RPM"
 rpmbuild -vv -ba --build-in-place --define "_topdir $(pwd)/$packaging_dir" "$packaging_dir/SPECS/chatterino.spec" # full build
 breakline
-
-mv "$(pwd)/$packaging_dir/*/home/runner/work/chatterino2/chatterino2/build/appdir/*" "$(pwd)/$packaging_dir"
-rm -r "$(pwd)/$packaging_dir/*/home"
 
 tree "$(pwd)/$packaging_dir"
 
