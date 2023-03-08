@@ -2,6 +2,8 @@
 
 ## Unversioned
 
+- Major: Added `/shoutout` command for using twitch's native shoutout feature. (#15)
+
 ## 2.4.2
 
 - Minor: Added `/banid` command that allows banning by user ID. (#4411)
