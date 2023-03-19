@@ -3,6 +3,12 @@
 ## Unversioned
 
 - Major: Added `/shoutout` command for using twitch's native shoutout feature. (#15)
+- Minor: Added support for FrankerFaceZ animated emotes. (#4434)
+- Bugfix: Fixed an issue where animated emotes would render on top of zero-width emotes. (#4314)
+- Bugfix: Fixed an issue where it was difficult to hover a zero-width emote. (#4314)
+- Dev: Ignore unhandled BTTV user-events. (#4438)
+- Dev: Only log debug messages when NDEBUG is not defined. (#4442)
+- Dev: Cleaned up theme related code. (#4450)
 
 ## 2.4.2
 
