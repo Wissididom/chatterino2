@@ -294,6 +294,7 @@ jobs:
         run: |
           cd build
           sh ./../.CI/CreateUbuntuDeb.sh
+          mv Chatterino-${{ matrix.os }}-x86_64.deb Chatterino-${{ matrix.os }}-Qt-${{ matrix.qt-version }}.deb
         shell: bash
 
       - name: Upload artifact - AppImage (Ubuntu)
@@ -308,7 +309,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Chatterino-${{ matrix.os }}-Qt-${{ matrix.qt-version }}.deb
-          path: build/Chatterino-${{ matrix.os }}-x86_64.deb
+          path: build/Chatterino-${{ matrix.os }}-Qt-${{ matrix.qt-version }}.deb
 
       # MACOS
       - name: Install dependencies (MacOS)
@@ -353,7 +354,7 @@ jobs:
   create-release:
     needs: build
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    # if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
 
     steps:
       - uses: actions/checkout@v3
