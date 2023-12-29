@@ -213,7 +213,7 @@ jobs:
               -DBUILD_WITH_CRASHPAD="$Env:C2_ENABLE_CRASHPAD" `
               -DCHATTERINO_LTO="$Env:C2_ENABLE_LTO" `
               -DCHATTERINO_PLUGINS="$Env:C2_PLUGINS" `
-              -DBUILD_WITH_QT6="$Env:C2_BUILD_WITH_QT6" `
+              -DBUILD_WITH_QT6="$Env:C2_BUILD_WITH_QT6"
           cd build
           cmake --build . --config Release
 
@@ -300,8 +300,7 @@ jobs:
             -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
             -DCHATTERINO_LTO="$C2_ENABLE_LTO" \
             -DCHATTERINO_PLUGINS="$C2_PLUGINS" \
-            -DBUILD_WITH_QT6="$C2_BUILD_WITH_QT6" \
-            ..
+            -DBUILD_WITH_QT6="$C2_BUILD_WITH_QT6"
           mkdir build
           cd build
           cmake --build . -parallel "$(nproc)" --config Release
@@ -346,16 +345,14 @@ jobs:
         if: startsWith(matrix.os, 'macos')
         run: |
           # Has to be VCPKG_INSTALLATION_ROOT because VCPKG_ROOT was removed from the runners according to https://github.com/actions/runner-images/issues/6376
-          cmake \
-              -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
+          cmake -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 \
               -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl \
               -DUSE_PRECOMPILED_HEADERS=OFF \
               -DCHATTERINO_LTO="$C2_ENABLE_LTO" \
               -DCHATTERINO_PLUGINS="$C2_PLUGINS" \
-              -DBUILD_WITH_QT6="$C2_BUILD_WITH_QT6" \
-              ..
+              -DBUILD_WITH_QT6="$C2_BUILD_WITH_QT6"
           mkdir build
           cd build
           cmake --build . -parallel "$(sysctl -n hw.logicalcpu)" --config Release
