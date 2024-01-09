@@ -174,7 +174,7 @@ jobs:
         run: |
           cmake -B build -DCMAKE_TOOLCHAIN_FILE="$Env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DBUILD_WITH_QT6="$Env:C2_BUILD_WITH_QT6"
           cd build
-          cmake --build . --target ALL_BUILD --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors --config RelWithDebInfo
+          cmake --build . --parallel (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors --config RelWithDebInfo
 
       - name: Fix Qt6 (windows)
         if: startsWith(matrix.qt-version, '6.') && startsWith(matrix.os, 'windows')
