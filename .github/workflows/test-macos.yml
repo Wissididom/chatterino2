@@ -83,6 +83,7 @@ jobs:
 
       - name: Download httpbox
         run: |
+          chmod +x httpbox
           curl -L -o httpbox "https://github.com/Wissididom/httpbox/releases/download/nightly-build/httpbox-macos-stable"
         working-directory: build-test
 
