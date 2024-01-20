@@ -83,7 +83,6 @@ jobs:
 
       - name: Download httpbox
         run: |
-          cargo install --git https://github.com/kevinastone/httpbox --rev 89b971f
           curl -L -o httpbox "https://github.com/Wissididom/httpbox/releases/download/nightly-build/httpbox-macos-stable"
         working-directory: build-test
 
