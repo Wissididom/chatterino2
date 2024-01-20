@@ -81,14 +81,16 @@ jobs:
           curl -L -o server.key "https://github.com/Chatterino/twitch-pubsub-server-test/raw/${{ env.TWITCH_PUBSUB_SERVER_TAG }}/cmd/server/server.key"
           cd ..
 
-      - name: Cargo Install httpbox
+      - name: Download httpbox
         run: |
           cargo install --git https://github.com/kevinastone/httpbox --rev 89b971f
+          curl -L -o httpbox "https://github.com/Wissididom/httpbox/releases/download/nightly-build/httpbox-macos-stable"
+        working-directory: build-test
 
       - name: Test
         timeout-minutes: 30
         run: |
-          httpbox --port 9051 &
+          ./httpbox --port 9051 &
           cd ../pubsub-server-test
           ./server 127.0.0.1:9050 &
           cd ../build-test
