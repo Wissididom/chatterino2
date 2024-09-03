@@ -6,7 +6,15 @@
 class QByteArray;
 class QString;
 
+namespace chatterino {
+
+class Paths;
+
+}  // namespace chatterino
+
 namespace chatterino::ipc {
+
+void initPaths(const Paths *paths);
 
 void sendMessage(const char *name, const QByteArray &data);
 
@@ -18,6 +26,8 @@ public:
 
     static std::pair<std::unique_ptr<IpcQueue>, QString> tryReplaceOrCreate(
         const char *name, size_t maxMessages, size_t maxMessageSize);
+
+    static bool remove(const char *name);
 
     // TODO: use std::expected
     /// Try to receive a message.

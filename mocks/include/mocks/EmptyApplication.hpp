@@ -5,17 +5,30 @@
 #include "singletons/Paths.hpp"
 #include "singletons/Updates.hpp"
 
+#include <QTemporaryDir>
+
 namespace chatterino::mock {
 
 class EmptyApplication : public IApplication
 {
 public:
-    EmptyApplication()
-        : updates_(this->paths_)
+    EmptyApplication() = default;
+
+    explicit EmptyApplication(const QString &settingsData)
     {
+        QFile settingsFile(this->settingsDir.filePath("settings.json"));
+        settingsFile.open(QIODevice::WriteOnly | QIODevice::Text);
+        settingsFile.write(settingsData.toUtf8());
+        settingsFile.flush();
+        settingsFile.close();
     }
 
-    virtual ~EmptyApplication() = default;
+    ~EmptyApplication() override = default;
+
+    bool isTest() const override
+    {
+        return true;
+    }
 
     const Paths &getPaths() override
     {
@@ -128,7 +141,7 @@ public:
         return nullptr;
     }
 
-    Logging *getChatLogger() override
+    ILogging *getChatLogger() override
     {
         assert(!"getChatLogger was called without being initialized");
         return nullptr;
@@ -186,15 +199,74 @@ public:
         return nullptr;
     }
 
-    Updates &getUpdates() override
+#ifdef CHATTERINO_HAVE_PLUGINS
+    PluginController *getPlugins() override
     {
-        return this->updates_;
+        assert(false && "EmptyApplication::getPlugins was called without "
+                        "being initialized");
+        return nullptr;
+    }
+#endif
+
+    BttvEmotes *getBttvEmotes() override
+    {
+        assert(false && "EmptyApplication::getBttvEmotes was called without "
+                        "being initialized");
+        return nullptr;
     }
 
-private:
+    BttvLiveUpdates *getBttvLiveUpdates() override
+    {
+        assert(false && "EmptyApplication::getBttvLiveUpdates was called "
+                        "without being initialized");
+        return nullptr;
+    }
+
+    FfzEmotes *getFfzEmotes() override
+    {
+        assert(false && "EmptyApplication::getFfzEmotes was called without "
+                        "being initialized");
+        return nullptr;
+    }
+
+    SeventvEmotes *getSeventvEmotes() override
+    {
+        assert(false && "EmptyApplication::getSeventvEmotes was called without "
+                        "being initialized");
+        return nullptr;
+    }
+
+    SeventvEventAPI *getSeventvEventAPI() override
+    {
+        assert(false && "EmptyApplication::getSeventvEventAPI was called "
+                        "without being initialized");
+        return nullptr;
+    }
+
+    ILinkResolver *getLinkResolver() override
+    {
+        assert(false && "EmptyApplication::getLinkResolver was called without "
+                        "being initialized");
+        return nullptr;
+    }
+
+    IStreamerMode *getStreamerMode() override
+    {
+        assert(false && "EmptyApplication::getStreamerMode was called without "
+                        "being initialized");
+        return nullptr;
+    }
+
+    ITwitchUsers *getTwitchUsers() override
+    {
+        assert(false && "EmptyApplication::getTwitchUsers was called without "
+                        "being initialized");
+        return nullptr;
+    }
+
+    QTemporaryDir settingsDir;
     Paths paths_;
     Args args_;
-    Updates updates_;
 };
 
 }  // namespace chatterino::mock

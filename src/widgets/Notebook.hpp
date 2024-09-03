@@ -42,7 +42,16 @@ public:
 
     NotebookTab *addPage(QWidget *page, QString title = QString(),
                          bool select = false);
+
+    /**
+     * @brief Adds a page to the Notebook at a given position.
+     *
+     * @param position if set to -1, adds the page to the end
+     **/
+    NotebookTab *addPageAt(QWidget *page, int position,
+                           QString title = QString(), bool select = false);
     void removePage(QWidget *page);
+    void duplicatePage(QWidget *page);
     void removeCurrentPage();
 
     /**
@@ -107,9 +116,6 @@ public:
     bool getAllowUserTabManagement() const;
     void setAllowUserTabManagement(bool value);
 
-    bool getShowTabs() const;
-    void setShowTabs(bool value);
-
     bool getShowAddButton() const;
     void setShowAddButton(bool value);
 
@@ -118,12 +124,15 @@ public:
     bool isNotebookLayoutLocked() const;
     void setLockNotebookLayout(bool value);
 
-    void addNotebookActionsToMenu(QMenu *menu);
+    virtual void addNotebookActionsToMenu(QMenu *menu);
 
     // Update layout and tab visibility
     void refresh();
 
 protected:
+    bool getShowTabs() const;
+    void setShowTabs(bool value);
+
     void scaleChangedEvent(float scale_) override;
     void resizeEvent(QResizeEvent *) override;
     void mousePressEvent(QMouseEvent *event) override;
@@ -169,7 +178,6 @@ private:
      * @brief Updates the visibility state of all tabs
      **/
     void updateTabVisibility();
-    void updateTabVisibilityMenuAction();
     void resizeAddButton();
 
     bool containsPage(QWidget *page);
@@ -182,7 +190,7 @@ private:
     size_t visibleButtonCount() const;
 
     QList<Item> items_;
-    QMenu menu_;
+    QMenu *menu_ = nullptr;
     QWidget *selectedPage_ = nullptr;
 
     NotebookButton *addButton_;
@@ -193,9 +201,14 @@ private:
     bool showAddButton_ = false;
     int lineOffset_ = 20;
     bool lockNotebookLayout_ = false;
+
+    bool refreshPaused_ = false;
+    bool refreshRequested_ = false;
+
     NotebookTabLocation tabLocation_ = NotebookTabLocation::Top;
+
     QAction *lockNotebookLayoutAction_;
-    QAction *showTabsAction_;
+    QAction *toggleTopMostAction_;
 
     // This filter, if set, is used to figure out the visibility of
     // the tabs in this notebook.
@@ -214,6 +227,17 @@ public:
     void select(QWidget *page, bool focusPage = true) override;
     void themeChangedEvent() override;
 
+    void addNotebookActionsToMenu(QMenu *menu) override;
+
+    /**
+     * Toggles between the "Show all tabs" and "Hide all tabs" tab visibility states
+     */
+    void toggleTabVisibility();
+
+    QAction *showAllTabsAction;
+    QAction *onlyShowLiveTabsAction;
+    QAction *hideAllTabsAction;
+
 protected:
     void showEvent(QShowEvent *event) override;
 
@@ -224,7 +248,6 @@ private:
 
     // Main window on Windows has basically a duplicate of this in Window
     NotebookButton *streamerModeIcon_{};
-
     void updateStreamerModeIcon();
 };
 

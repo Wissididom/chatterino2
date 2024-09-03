@@ -9,6 +9,8 @@ on:
 env:
   TWITCH_PUBSUB_SERVER_TAG: v1.0.7
   QT_QPA_PLATFORM: minimal
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
 
 concurrency:
   group: test-macos-${{ github.ref }}
@@ -21,7 +23,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-13]
-        qt-version: [5.15.2, 6.5.0]
+        qt-version: [5.15.2, 6.7.1]
         plugins: [false]
       fail-fast: false
     env:
@@ -45,7 +47,7 @@ jobs:
           fetch-depth: 0 # allows for tags access
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v3.3.0
+        uses: jurplel/install-qt-action@v4.0.0
         with:
           cache: true
           cache-key-prefix: ${{ runner.os }}-QtCache-${{ matrix.qt-version }}-v2

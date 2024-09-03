@@ -3,8 +3,8 @@
 #include "providers/seventv/eventapi/Client.hpp"
 #include "providers/seventv/eventapi/Dispatch.hpp"
 #include "providers/seventv/eventapi/Message.hpp"
+#include "Test.hpp"
 
-#include <gtest/gtest.h>
 #include <QString>
 
 #include <optional>
@@ -28,16 +28,16 @@ TEST(SeventvEventAPI, AllEvents)
     std::optional<EmoteRemoveDispatch> removeDispatch;
     std::optional<UserConnectionUpdateDispatch> userDispatch;
 
-    eventAPI.signals_.emoteAdded.connect([&](const auto &d) {
+    std::ignore = eventAPI.signals_.emoteAdded.connect([&](const auto &d) {
         addDispatch = d;
     });
-    eventAPI.signals_.emoteUpdated.connect([&](const auto &d) {
+    std::ignore = eventAPI.signals_.emoteUpdated.connect([&](const auto &d) {
         updateDispatch = d;
     });
-    eventAPI.signals_.emoteRemoved.connect([&](const auto &d) {
+    std::ignore = eventAPI.signals_.emoteRemoved.connect([&](const auto &d) {
         removeDispatch = d;
     });
-    eventAPI.signals_.userUpdated.connect([&](const auto &d) {
+    std::ignore = eventAPI.signals_.userUpdated.connect([&](const auto &d) {
         userDispatch = d;
     });
 

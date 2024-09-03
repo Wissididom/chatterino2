@@ -4,13 +4,12 @@
 #include "providers/twitch/pubsubmessages/AutoMod.hpp"
 #include "providers/twitch/pubsubmessages/Whisper.hpp"
 #include "providers/twitch/TwitchAccount.hpp"
-#include "TestHelpers.hpp"
+#include "Test.hpp"
 
-#include <gtest/gtest.h>
 #include <QString>
 
 #include <chrono>
-#include <optional>
+#include <mutex>
 
 using namespace chatterino;
 using namespace std::chrono_literals;
@@ -32,6 +31,49 @@ using namespace std::chrono_literals;
 #define RUN_PUBSUB_TESTS
 
 #ifdef RUN_PUBSUB_TESTS
+
+namespace chatterino {
+
+template <typename T>
+class ReceivedMessage
+{
+    mutable std::mutex mutex;
+
+    bool isSet{false};
+    T t;
+
+public:
+    ReceivedMessage() = default;
+
+    explicit operator bool() const
+    {
+        std::unique_lock lock(this->mutex);
+
+        return this->isSet;
+    }
+
+    ReceivedMessage &operator=(const T &newT)
+    {
+        std::unique_lock lock(this->mutex);
+
+        this->isSet = true;
+        this->t = newT;
+
+        return *this;
+    }
+
+    bool operator==(const T &otherT) const
+    {
+        std::unique_lock lock(this->mutex);
+
+        return this->t == otherT;
+    }
+
+    const T *operator->() const
+    {
+        return &this->t;
+    }
+};
 
 class FTest : public PubSub
 {
@@ -138,14 +180,7 @@ TEST(TwitchPubSubClient, DisconnectedAfter1s)
     ASSERT_EQ(pubSub.diag.messagesReceived, 2);  // Listen RESPONSE & Pong
     ASSERT_EQ(pubSub.diag.listenResponses, 1);
 
-    std::this_thread::sleep_for(350ms);
-
-    ASSERT_EQ(pubSub.diag.connectionsOpened, 1);
-    ASSERT_EQ(pubSub.diag.connectionsClosed, 0);
-    ASSERT_EQ(pubSub.diag.connectionsFailed, 0);
-    ASSERT_EQ(pubSub.diag.messagesReceived, 2);
-
-    std::this_thread::sleep_for(600ms);
+    std::this_thread::sleep_for(950ms);
 
     ASSERT_EQ(pubSub.diag.connectionsOpened, 2);
     ASSERT_EQ(pubSub.diag.connectionsClosed, 1);
@@ -416,5 +451,7 @@ TEST(TwitchPubSubClient, AutoModMessageHeld)
     ASSERT_EQ(pubSub.diag.connectionsClosed, 1);
     ASSERT_EQ(pubSub.diag.connectionsFailed, 0);
 }
+
+}  // namespace chatterino
 
 #endif

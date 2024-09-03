@@ -1,4 +1,4 @@
-#include "SettingsPage.hpp"
+#include "widgets/settingspages/SettingsPage.hpp"
 
 #include "Application.hpp"
 #include "singletons/WindowManager.hpp"
@@ -87,11 +87,6 @@ void SettingsPage::setTab(SettingsDialogTab *tab)
     this->tab_ = tab;
 }
 
-void SettingsPage::cancel()
-{
-    this->onCancel_.invoke();
-}
-
 QCheckBox *SettingsPage::createCheckBox(
     const QString &text, pajlada::Settings::Setting<bool> &setting)
 {
@@ -108,7 +103,7 @@ QCheckBox *SettingsPage::createCheckBox(
     QObject::connect(checkbox, &QCheckBox::toggled, this,
                      [&setting](bool state) {
                          setting = state;
-                         getIApp()->getWindows()->forceLayoutChannelViews();
+                         getApp()->getWindows()->forceLayoutChannelViews();
                      });
 
     return checkbox;

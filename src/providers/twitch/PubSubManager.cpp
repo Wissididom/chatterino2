@@ -1,17 +1,18 @@
 #include "providers/twitch/PubSubManager.hpp"
 
+#include "Application.hpp"
 #include "common/QLogging.hpp"
+#include "controllers/accounts/AccountController.hpp"
 #include "providers/NetworkConfigurationProvider.hpp"
 #include "providers/twitch/PubSubActions.hpp"
 #include "providers/twitch/PubSubClient.hpp"
 #include "providers/twitch/PubSubHelpers.hpp"
 #include "providers/twitch/PubSubMessages.hpp"
 #include "providers/twitch/TwitchAccount.hpp"
-#include "pubsubmessages/LowTrustUsers.hpp"
 #include "util/DebugCount.hpp"
 #include "util/Helpers.hpp"
 #include "util/RapidjsonHelpers.hpp"
-#include "util/StreamerMode.hpp"
+#include "util/RenameThread.hpp"
 
 #include <QJsonArray>
 
@@ -19,6 +20,7 @@
 #include <exception>
 #include <future>
 #include <iostream>
+#include <memory>
 #include <thread>
 
 using websocketpp::lib::bind;
@@ -287,6 +289,66 @@ PubSub::PubSub(const QString &host, std::chrono::seconds pingInterval)
         this->moderation.userUnbanned.invoke(action);
     };
 
+    this->moderationActionHandlers["warn"] = [this](const auto &data,
+                                                    const auto &roomID) {
+        WarnAction action(data, roomID);
+
+        action.source.id = data.value("created_by_user_id").toString();
+        action.source.login =
+            data.value("created_by").toString();  // currently always empty
+
+        action.target.id = data.value("target_user_id").toString();
+        action.target.login = data.value("target_user_login").toString();
+
+        const auto reasons = data.value("args").toArray();
+        bool firstArg = true;
+        for (const auto &reasonValue : reasons)
+        {
+            if (firstArg)
+            {
+                // Skip first arg in the reasons array since it's not a reason
+                firstArg = false;
+                continue;
+            }
+            const auto &reason = reasonValue.toString();
+            if (!reason.isEmpty())
+            {
+                action.reasons.append(reason);
+            }
+        }
+
+        this->moderation.userWarned.invoke(action);
+    };
+
+    this->moderationActionHandlers["raid"] = [this](const auto &data,
+                                                    const auto &roomID) {
+        RaidAction action(data, roomID);
+
+        action.source.id = data.value("created_by_user_id").toString();
+        action.source.login = data.value("created_by").toString();
+
+        const auto args = data.value("args").toArray();
+
+        if (args.isEmpty())
+        {
+            return;
+        }
+
+        action.target = args[0].toString();
+
+        this->moderation.raidStarted.invoke(action);
+    };
+
+    this->moderationActionHandlers["unraid"] = [this](const auto &data,
+                                                      const auto &roomID) {
+        UnraidAction action(data, roomID);
+
+        action.source.id = data.value("created_by_user_id").toString();
+        action.source.login = data.value("created_by").toString();
+
+        this->moderation.raidCanceled.invoke(action);
+    };
+
     /*
     // This handler is no longer required as we use the automod-queue topic now
     this->moderationActionHandlers["automod_rejected"] =
@@ -477,6 +539,23 @@ PubSub::~PubSub()
     this->stop();
 }
 
+void PubSub::initialize()
+{
+    this->start();
+    this->setAccount(getApp()->getAccounts()->twitch.getCurrent());
+
+    getApp()->getAccounts()->twitch.currentUserChanged.connect(
+        [this] {
+            this->unlistenChannelModerationActions();
+            this->unlistenAutomod();
+            this->unlistenLowTrustUsers();
+            this->unlistenChannelPointRewards();
+
+            this->setAccount(getApp()->getAccounts()->twitch.getCurrent());
+        },
+        boost::signals2::at_front);
+}
+
 void PubSub::setAccount(std::shared_ptr<TwitchAccount> account)
 {
     this->token_ = account->getOAuthToken();
@@ -514,7 +593,10 @@ void PubSub::start()
 {
     this->work = std::make_shared<boost::asio::io_service::work>(
         this->websocketClient.get_io_service());
-    this->thread.reset(new std::thread(std::bind(&PubSub::runThread, this)));
+    this->thread = std::make_unique<std::thread>([this] {
+        runThread();
+    });
+    renameThread(*this->thread, "PubSub");
 }
 
 void PubSub::stop()
@@ -547,8 +629,6 @@ void PubSub::stop()
             this->websocketClient.stop();
         }
     }
-
-    assert(this->clients.empty());
 }
 
 bool PubSub::listenToWhispers()
@@ -1132,8 +1212,8 @@ void PubSub::handleMessageResponse(const PubSubMessageMessage &message)
 
             case PubSubChatModeratorActionMessage::Type::INVALID:
             default: {
-                qCDebug(chatterinoPubSub)
-                    << "Invalid whisper type:" << innerMessage.typeString;
+                qCDebug(chatterinoPubSub) << "Invalid moderator action type:"
+                                          << innerMessage.typeString;
             }
             break;
         }
@@ -1151,6 +1231,8 @@ void PubSub::handleMessageResponse(const PubSubMessageMessage &message)
 
         switch (innerMessage.type)
         {
+            case PubSubCommunityPointsChannelV1Message::Type::
+                AutomaticRewardRedeemed:
             case PubSubCommunityPointsChannelV1Message::Type::RewardRedeemed: {
                 auto redemption =
                     innerMessage.data.value("redemption").toObject();

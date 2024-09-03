@@ -11,6 +11,7 @@
 #include <QJsonObject>
 #include <QString>
 #include <QStringList>
+#include <QTimeZone>
 #include <QUrl>
 #include <QUrlQuery>
 
@@ -69,6 +70,9 @@ struct HelixStream {
     QString language;
     QString thumbnailUrl;
 
+    // This is the names, the IDs are now always empty
+    std::vector<QString> tags;
+
     HelixStream()
         : id("")
         , userId("")
@@ -99,6 +103,11 @@ struct HelixStream {
         , language(jsonObject.value("language").toString())
         , thumbnailUrl(jsonObject.value("thumbnail_url").toString())
     {
+        const auto jsonTags = jsonObject.value("tags").toArray();
+        for (const auto &tag : jsonTags)
+        {
+            this->tags.push_back(tag.toString());
+        }
     }
 };
 
@@ -257,20 +266,18 @@ struct HelixEmoteSetData {
 };
 
 struct HelixChannelEmote {
-    const QString emoteId;
+    const QString id;
     const QString name;
     const QString type;
-    const QString setId;
-    const QString url;
+    const QString setID;
+    const QString ownerID;
 
-    explicit HelixChannelEmote(QJsonObject jsonObject)
-        : emoteId(jsonObject.value("id").toString())
-        , name(jsonObject.value("name").toString())
-        , type(jsonObject.value("emote_type").toString())
-        , setId(jsonObject.value("emote_set_id").toString())
-        , url(QString(TWITCH_EMOTE_TEMPLATE)
-                  .replace("{id}", this->emoteId)
-                  .replace("{scale}", "3.0"))
+    explicit HelixChannelEmote(const QJsonObject &jsonObject)
+        : id(jsonObject["id"].toString())
+        , name(jsonObject["name"].toString())
+        , type(jsonObject["emote_type"].toString())
+        , setID(jsonObject["emote_set_id"].toString())
+        , ownerID(jsonObject["owner_id"].toString())
     {
     }
 };
@@ -403,6 +410,57 @@ struct HelixGlobalBadges {
 };
 
 using HelixChannelBadges = HelixGlobalBadges;
+
+struct HelixDropReason {
+    QString code;
+    QString message;
+
+    explicit HelixDropReason(const QJsonObject &jsonObject)
+        : code(jsonObject["code"].toString())
+        , message(jsonObject["message"].toString())
+    {
+    }
+};
+
+struct HelixSentMessage {
+    QString id;
+    bool isSent;
+    std::optional<HelixDropReason> dropReason;
+
+    explicit HelixSentMessage(const QJsonObject &jsonObject)
+        : id(jsonObject["message_id"].toString())
+        , isSent(jsonObject["is_sent"].toBool())
+        , dropReason(jsonObject.contains("drop_reason")
+                         ? std::optional(HelixDropReason(
+                               jsonObject["drop_reason"].toObject()))
+                         : std::nullopt)
+    {
+    }
+};
+
+struct HelixFollowedChannel {
+    QString broadcasterID;
+    QString broadcasterLogin;
+    QString broadcasterName;
+    QDateTime followedAt;
+
+    explicit HelixFollowedChannel(const QJsonObject &jsonObject)
+        : broadcasterID(jsonObject["broadcaster_id"].toString())
+        , broadcasterLogin(jsonObject["broadcaster_login"].toString())
+        , broadcasterName(jsonObject["broadcaster_name"].toString())
+        , followedAt(QDateTime::fromString(jsonObject["followed_at"].toString(),
+                                           Qt::ISODate))
+    {
+    }
+};
+
+struct HelixSendMessageArgs {
+    QString broadcasterID;
+    QString senderID;
+    QString message;
+    /// Optional
+    QString replyParentMessageID;
+};
 
 enum class HelixAnnouncementColor {
     Blue,
@@ -552,6 +610,19 @@ enum class HelixUpdateChatSettingsError {  // update chat settings
     Forwarded,
 };  // update chat settings
 
+/// Error type for Helix::updateChannel
+///
+/// Used in the /settitle and /setgame commands
+enum class HelixUpdateChannelError {
+    Unknown,
+    UserMissingScope,
+    UserNotAuthorized,
+    Ratelimited,
+
+    // The error message is forwarded directly from the Twitch API
+    Forwarded,
+};
+
 enum class HelixBanUserError {  // /timeout, /ban
     Unknown,
     UserMissingScope,
@@ -564,6 +635,18 @@ enum class HelixBanUserError {  // /timeout, /ban
     // The error message is forwarded directly from the Twitch API
     Forwarded,
 };  // /timeout, /ban
+
+enum class HelixWarnUserError {  // /warn
+    Unknown,
+    UserMissingScope,
+    UserNotAuthorized,
+    Ratelimited,
+    ConflictingOperation,
+    CannotWarnUser,
+
+    // The error message is forwarded directly from the Twitch API
+    Forwarded,
+};  // /warn
 
 enum class HelixWhisperError {  // /w
     Unknown,
@@ -656,7 +739,7 @@ struct HelixShieldModeStatus {
         , lastActivatedAt(QDateTime::fromString(
               json["last_activated_at"].toString(), Qt::ISODate))
     {
-        this->lastActivatedAt.setTimeSpec(Qt::UTC);
+        this->lastActivatedAt.setTimeZone(QTimeZone::utc());
     }
 };
 
@@ -688,6 +771,19 @@ enum class HelixGetGlobalBadgesError {
     Forwarded,
 };
 
+enum class HelixSendMessageError {
+    Unknown,
+
+    MissingText,
+    BadRequest,
+    Forbidden,
+    MessageTooLarge,
+    UserMissingScope,
+
+    // The error message is forwarded directly from the Twitch API
+    Forwarded,
+};
+
 struct HelixError {
     /// Text version of the HTTP error that happened (e.g. Bad Request)
     QString error;
@@ -705,6 +801,10 @@ struct HelixError {
 };
 
 using HelixGetChannelBadgesError = HelixGetGlobalBadgesError;
+
+struct HelixPaginationState {
+    bool done;
+};
 
 class IHelix
 {
@@ -806,7 +906,7 @@ public:
     virtual void updateChannel(
         QString broadcasterId, QString gameId, QString language, QString title,
         std::function<void(NetworkResult)> successCallback,
-        HelixFailureCallback failureCallback) = 0;
+        FailureCallback<HelixUpdateChannelError, QString> failureCallback) = 0;
 
     // https://dev.twitch.tv/docs/api/reference#manage-held-automod-messages
     virtual void manageAutoModMessages(
@@ -955,6 +1055,13 @@ public:
         ResultCallback<> successCallback,
         FailureCallback<HelixBanUserError, QString> failureCallback) = 0;
 
+    // Warn a user
+    // https://dev.twitch.tv/docs/api/reference#warn-chat-user
+    virtual void warnUser(
+        QString broadcasterID, QString moderatorID, QString userID,
+        QString reason, ResultCallback<> successCallback,
+        FailureCallback<HelixWarnUserError, QString> failureCallback) = 0;
+
     // Send a whisper
     // https://dev.twitch.tv/docs/api/reference#send-whisper
     virtual void sendWhisper(
@@ -1018,6 +1125,27 @@ public:
         QString fromBroadcasterID, QString toBroadcasterID, QString moderatorID,
         ResultCallback<> successCallback,
         FailureCallback<HelixSendShoutoutError, QString> failureCallback) = 0;
+
+    /// https://dev.twitch.tv/docs/api/reference/#send-chat-message
+    virtual void sendChatMessage(
+        HelixSendMessageArgs args,
+        ResultCallback<HelixSentMessage> successCallback,
+        FailureCallback<HelixSendMessageError, QString> failureCallback) = 0;
+
+    /// https://dev.twitch.tv/docs/api/reference/#get-user-emotes
+    virtual void getUserEmotes(
+        QString userID, QString broadcasterID,
+        ResultCallback<std::vector<HelixChannelEmote>, HelixPaginationState>
+            pageCallback,
+        FailureCallback<QString> failureCallback,
+        CancellationToken &&token) = 0;
+
+    /// https://dev.twitch.tv/docs/api/reference/#get-followed-channels
+    /// (non paginated)
+    virtual void getFollowedChannel(
+        QString userID, QString broadcasterID,
+        ResultCallback<std::optional<HelixFollowedChannel>> successCallback,
+        FailureCallback<QString> failureCallback) = 0;
 
     virtual void update(QString clientId, QString oauthToken) = 0;
 
@@ -1121,7 +1249,8 @@ public:
     void updateChannel(QString broadcasterId, QString gameId, QString language,
                        QString title,
                        std::function<void(NetworkResult)> successCallback,
-                       HelixFailureCallback failureCallback) final;
+                       FailureCallback<HelixUpdateChannelError, QString>
+                           failureCallback) final;
 
     // https://dev.twitch.tv/docs/api/reference#manage-held-automod-messages
     void manageAutoModMessages(
@@ -1270,6 +1399,13 @@ public:
         ResultCallback<> successCallback,
         FailureCallback<HelixBanUserError, QString> failureCallback) final;
 
+    // Warn a user
+    // https://dev.twitch.tv/docs/api/reference#warn-chat-user
+    void warnUser(
+        QString broadcasterID, QString moderatorID, QString userID,
+        QString reason, ResultCallback<> successCallback,
+        FailureCallback<HelixWarnUserError, QString> failureCallback) final;
+
     // Send a whisper
     // https://dev.twitch.tv/docs/api/reference#send-whisper
     void sendWhisper(
@@ -1333,6 +1469,27 @@ public:
         ResultCallback<> successCallback,
         FailureCallback<HelixSendShoutoutError, QString> failureCallback) final;
 
+    /// https://dev.twitch.tv/docs/api/reference/#send-chat-message
+    void sendChatMessage(
+        HelixSendMessageArgs args,
+        ResultCallback<HelixSentMessage> successCallback,
+        FailureCallback<HelixSendMessageError, QString> failureCallback) final;
+
+    /// https://dev.twitch.tv/docs/api/reference/#get-user-emotes
+    void getUserEmotes(
+        QString userID, QString broadcasterID,
+        ResultCallback<std::vector<HelixChannelEmote>, HelixPaginationState>
+            pageCallback,
+        FailureCallback<QString> failureCallback,
+        CancellationToken &&token) final;
+
+    /// https://dev.twitch.tv/docs/api/reference/#get-followed-channels
+    /// (non paginated)
+    void getFollowedChannel(
+        QString userID, QString broadcasterID,
+        ResultCallback<std::optional<HelixFollowedChannel>> successCallback,
+        FailureCallback<QString> failureCallback) final;
+
     void update(QString clientId, QString oauthToken) final;
 
     static void initialize();
@@ -1387,7 +1544,9 @@ private:
     /// Paginate the `url` endpoint and use `baseQuery` as the starting point for pagination.
     /// @param onPage returns true while a new page is expected. Once false is returned, pagination will stop.
     void paginate(const QString &url, const QUrlQuery &baseQuery,
-                  std::function<bool(const QJsonObject &)> onPage,
+                  std::function<bool(const QJsonObject &,
+                                     const HelixPaginationState &state)>
+                      onPage,
                   std::function<void(NetworkResult)> onError,
                   CancellationToken &&token);
 

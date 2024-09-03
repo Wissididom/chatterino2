@@ -5,16 +5,16 @@
 #include "controllers/completion/strategies/ClassicUserStrategy.hpp"
 #include "controllers/completion/strategies/Strategy.hpp"
 #include "messages/Emote.hpp"
+#include "mocks/BaseApplication.hpp"
 #include "mocks/Channel.hpp"
-#include "mocks/EmptyApplication.hpp"
 #include "mocks/Helix.hpp"
 #include "mocks/TwitchIrcServer.hpp"
 #include "singletons/Emotes.hpp"
 #include "singletons/Paths.hpp"
 #include "singletons/Settings.hpp"
+#include "Test.hpp"
 #include "widgets/splits/InputCompletionPopup.hpp"
 
-#include <gtest/gtest.h>
 #include <QDir>
 #include <QFile>
 #include <QModelIndex>
@@ -31,9 +31,14 @@ namespace {
 using namespace chatterino::completion;
 using ::testing::Exactly;
 
-class MockApplication : mock::EmptyApplication
+class MockApplication : public mock::BaseApplication
 {
 public:
+    explicit MockApplication(const QString &settingsData)
+        : BaseApplication(settingsData)
+    {
+    }
+
     AccountController *getAccounts() override
     {
         return &this->accounts;
@@ -49,9 +54,27 @@ public:
         return &this->emotes;
     }
 
+    BttvEmotes *getBttvEmotes() override
+    {
+        return &this->bttvEmotes;
+    }
+
+    FfzEmotes *getFfzEmotes() override
+    {
+        return &this->ffzEmotes;
+    }
+
+    SeventvEmotes *getSeventvEmotes() override
+    {
+        return &this->seventvEmotes;
+    }
+
     AccountController accounts;
     mock::MockTwitchIrcServer twitch;
     Emotes emotes;
+    BttvEmotes bttvEmotes;
+    FfzEmotes ffzEmotes;
+    SeventvEmotes seventvEmotes;
 };
 
 }  // namespace
@@ -92,28 +115,16 @@ class InputCompletionTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // Write default settings to the mock settings json file
-        this->settingsDir_ = std::make_unique<QTemporaryDir>();
-
-        QFile settingsFile(this->settingsDir_->filePath("settings.json"));
-        ASSERT_TRUE(settingsFile.open(QIODevice::WriteOnly | QIODevice::Text));
-        ASSERT_GT(settingsFile.write(DEFAULT_SETTINGS.toUtf8()), 0);
-        ASSERT_TRUE(settingsFile.flush());
-        settingsFile.close();
-
         // Initialize helix client
         this->mockHelix = std::make_unique<mock::Helix>();
         initializeHelix(this->mockHelix.get());
         EXPECT_CALL(*this->mockHelix, loadBlocks).Times(Exactly(1));
         EXPECT_CALL(*this->mockHelix, update).Times(Exactly(1));
 
-        this->mockApplication = std::make_unique<MockApplication>();
-        this->settings = std::make_unique<Settings>(this->settingsDir_->path());
-        this->paths = std::make_unique<Paths>();
+        this->mockApplication =
+            std::make_unique<MockApplication>(DEFAULT_SETTINGS);
 
-        this->mockApplication->accounts.initialize(*this->settings,
-                                                   *this->paths);
-        this->mockApplication->emotes.initialize(*this->settings, *this->paths);
+        this->mockApplication->accounts.load();
 
         this->channelPtr = std::make_shared<MockChannel>("icelys");
 
@@ -123,19 +134,11 @@ protected:
     void TearDown() override
     {
         this->mockApplication.reset();
-        this->settings.reset();
-        this->paths.reset();
         this->mockHelix.reset();
         this->channelPtr.reset();
-
-        this->settingsDir_.reset();
     }
 
-    std::unique_ptr<QTemporaryDir> settingsDir_;
-
     std::unique_ptr<MockApplication> mockApplication;
-    std::unique_ptr<Settings> settings;
-    std::unique_ptr<Paths> paths;
     std::unique_ptr<mock::Helix> mockHelix;
 
     ChannelPtr channelPtr;
@@ -154,18 +157,18 @@ private:
         addEmote(*bttvEmotes, ":-)");
         addEmote(*bttvEmotes, "B-)");
         addEmote(*bttvEmotes, "Clap");
-        this->mockApplication->twitch.bttv.setEmotes(std::move(bttvEmotes));
+        this->mockApplication->bttvEmotes.setEmotes(std::move(bttvEmotes));
 
         auto ffzEmotes = std::make_shared<EmoteMap>();
         addEmote(*ffzEmotes, "LilZ");
         addEmote(*ffzEmotes, "ManChicken");
         addEmote(*ffzEmotes, "CatBag");
-        this->mockApplication->twitch.ffz.setEmotes(std::move(ffzEmotes));
+        this->mockApplication->ffzEmotes.setEmotes(std::move(ffzEmotes));
 
         auto seventvEmotes = std::make_shared<EmoteMap>();
         addEmote(*seventvEmotes, "Clap");
         addEmote(*seventvEmotes, "Clap2");
-        this->mockApplication->twitch.seventv.setGlobalEmotes(
+        this->mockApplication->seventvEmotes.setGlobalEmotes(
             std::move(seventvEmotes));
     }
 
@@ -206,7 +209,7 @@ void containsRoughly(std::span<EmoteItem> span, std::set<QString> values)
             }
         }
 
-        ASSERT_TRUE(found) << qPrintable(v) << " was not found in the span";
+        ASSERT_TRUE(found) << v << " was not found in the span";
     }
 }
 

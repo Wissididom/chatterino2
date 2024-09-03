@@ -2,6 +2,7 @@
 
 #include "Application.hpp"
 #include "common/Args.hpp"
+#include "common/Common.hpp"
 #include "common/Credentials.hpp"
 #include "common/Modes.hpp"
 #include "common/QLogging.hpp"
@@ -12,6 +13,7 @@
 #include "providers/twitch/TwitchIrcServer.hpp"
 #include "singletons/Resources.hpp"
 #include "singletons/Settings.hpp"
+#include "singletons/StreamerMode.hpp"
 #include "singletons/Theme.hpp"
 #include "singletons/Updates.hpp"
 #include "singletons/WindowManager.hpp"
@@ -41,6 +43,7 @@
 #include <QDesktopServices>
 #include <QHeaderView>
 #include <QMenuBar>
+#include <QObject>
 #include <QPalette>
 #include <QStandardItemModel>
 #include <QVBoxLayout>
@@ -61,7 +64,7 @@ Window::Window(WindowType type, QWidget *parent)
 #endif
 
     this->bSignals_.emplace_back(
-        getIApp()->getAccounts()->twitch.currentUserChanged.connect([this] {
+        getApp()->getAccounts()->twitch.currentUserChanged.connect([this] {
             this->onAccountSelected();
         }));
     this->onAccountSelected();
@@ -75,7 +78,7 @@ Window::Window(WindowType type, QWidget *parent)
         this->resize(int(300 * this->scale()), int(500 * this->scale()));
     }
 
-    this->signalHolder_.managedConnect(getIApp()->getHotkeys()->onItemsUpdated,
+    this->signalHolder_.managedConnect(getApp()->getHotkeys()->onItemsUpdated,
                                        [this]() {
                                            this->clearShortcuts();
                                            this->addShortcuts();
@@ -105,11 +108,17 @@ bool Window::event(QEvent *event)
     switch (event->type())
     {
         case QEvent::WindowActivate: {
-            getIApp()->getWindows()->selectedWindow_ = this;
+            getApp()->getWindows()->selectedWindow_ = this;
             break;
         }
 
         case QEvent::WindowDeactivate: {
+            for (const auto &split :
+                 this->notebook_->getSelectedPage()->getSplits())
+            {
+                split->unpause();
+            }
+
             auto *page = this->notebook_->getSelectedPage();
 
             if (page != nullptr)
@@ -136,14 +145,14 @@ void Window::closeEvent(QCloseEvent *)
 {
     if (this->type_ == WindowType::Main)
     {
-        getIApp()->getWindows()->save();
-        getIApp()->getWindows()->closeAll();
+        getApp()->getWindows()->save();
+        getApp()->getWindows()->closeAll();
     }
 
     // Ensure selectedWindow_ is never an invalid pointer.
     // WindowManager will return the main window if no window is pointed to by
     // `selectedWindow_`.
-    getIApp()->getWindows()->selectedWindow_ = nullptr;
+    getApp()->getWindows()->selectedWindow_ = nullptr;
 
     this->closed.invoke();
 
@@ -180,7 +189,7 @@ void Window::addCustomTitlebarButtons()
 
     // settings
     this->addTitleBarButton(TitleBarButtonStyle::Settings, [this] {
-        getIApp()->getWindows()->showSettingsDialog(this);
+        getApp()->getWindows()->showSettingsDialog(this);
     });
 
     // updates
@@ -190,7 +199,7 @@ void Window::addCustomTitlebarButtons()
 
     // account
     this->userLabel_ = this->addTitleBarLabel([this] {
-        getIApp()->getWindows()->showAccountSelectPopup(
+        getApp()->getWindows()->showAccountSelectPopup(
             this->userLabel_->mapToGlobal(
                 this->userLabel_->rect().bottomLeft()));
     });
@@ -199,12 +208,11 @@ void Window::addCustomTitlebarButtons()
     // streamer mode
     this->streamerModeTitlebarIcon_ =
         this->addTitleBarButton(TitleBarButtonStyle::StreamerMode, [this] {
-            getIApp()->getWindows()->showSettingsDialog(
+            getApp()->getWindows()->showSettingsDialog(
                 this, SettingsDialogPreference::StreamerMode);
         });
-    this->signalHolder_.managedConnect(getApp()->streamerModeChanged, [this]() {
-        this->updateStreamerModeIcon();
-    });
+    QObject::connect(getApp()->getStreamerMode(), &IStreamerMode::changed, this,
+                     &Window::updateStreamerModeIcon);
 
     // Update initial state
     this->updateStreamerModeIcon();
@@ -231,7 +239,8 @@ void Window::updateStreamerModeIcon()
         this->streamerModeTitlebarIcon_->setPixmap(
             getResources().buttons.streamerModeEnabledDark);
     }
-    this->streamerModeTitlebarIcon_->setVisible(isInStreamerMode());
+    this->streamerModeTitlebarIcon_->setVisible(
+        getApp()->getStreamerMode()->isEnabled());
 #else
     // clang-format off
     assert(false && "Streamer mode TitleBar icon should not exist on non-Windows OSes");
@@ -252,7 +261,7 @@ void Window::addDebugStuff(HotkeyController::HotkeyMap &actions)
         const auto &messages = getSampleMiscMessages();
         static int index = 0;
         const auto &msg = messages[index++ % messages.size()];
-        getApp()->twitch->addFakeMessage(msg);
+        getApp()->getTwitch()->addFakeMessage(msg);
         return "";
     });
 
@@ -260,7 +269,7 @@ void Window::addDebugStuff(HotkeyController::HotkeyMap &actions)
         const auto &messages = getSampleCheerMessages();
         static int index = 0;
         const auto &msg = messages[index++ % messages.size()];
-        getApp()->twitch->addFakeMessage(msg);
+        getApp()->getTwitch()->addFakeMessage(msg);
         return "";
     });
 
@@ -268,13 +277,12 @@ void Window::addDebugStuff(HotkeyController::HotkeyMap &actions)
         const auto &messages = getSampleLinkMessages();
         static int index = 0;
         const auto &msg = messages[index++ % messages.size()];
-        getApp()->twitch->addFakeMessage(msg);
+        getApp()->getTwitch()->addFakeMessage(msg);
         return "";
     });
 
     actions.emplace("addRewardMessage", [=](std::vector<QString>) -> QString {
         rapidjson::Document doc;
-        auto app = getApp();
         static bool alt = true;
         if (alt)
         {
@@ -284,8 +292,9 @@ void Window::addDebugStuff(HotkeyController::HotkeyMap &actions)
                 oMessage->toInner<PubSubMessageMessage>()
                     ->toInner<PubSubCommunityPointsChannelV1Message>();
 
-            app->twitch->addFakeMessage(getSampleChannelRewardIRCMessage());
-            getIApp()->getTwitchPubSub()->pointReward.redeemed.invoke(
+            getApp()->getTwitch()->addFakeMessage(
+                getSampleChannelRewardIRCMessage());
+            getApp()->getTwitchPubSub()->pointReward.redeemed.invoke(
                 oInnerMessage->data.value("redemption").toObject());
             alt = !alt;
         }
@@ -296,7 +305,7 @@ void Window::addDebugStuff(HotkeyController::HotkeyMap &actions)
             auto oInnerMessage =
                 oMessage->toInner<PubSubMessageMessage>()
                     ->toInner<PubSubCommunityPointsChannelV1Message>();
-            getIApp()->getTwitchPubSub()->pointReward.redeemed.invoke(
+            getApp()->getTwitchPubSub()->pointReward.redeemed.invoke(
                 oInnerMessage->data.value("redemption").toObject());
             alt = !alt;
         }
@@ -307,7 +316,7 @@ void Window::addDebugStuff(HotkeyController::HotkeyMap &actions)
         const auto &messages = getSampleEmoteTestMessages();
         static int index = 0;
         const auto &msg = messages[index++ % messages.size()];
-        getApp()->twitch->addFakeMessage(msg);
+        getApp()->getTwitch()->addFakeMessage(msg);
         return "";
     });
 
@@ -315,7 +324,7 @@ void Window::addDebugStuff(HotkeyController::HotkeyMap &actions)
         const auto &messages = getSampleSubMessages();
         static int index = 0;
         const auto &msg = messages[index++ % messages.size()];
-        getApp()->twitch->addFakeMessage(msg);
+        getApp()->getTwitch()->addFakeMessage(msg);
         return "";
     });
 #endif
@@ -479,7 +488,7 @@ void Window::addShortcuts()
              }
              Split *split = new Split(splitContainer);
              split->setChannel(
-                 getApp()->twitch->getOrAddChannel(si.channelName));
+                 getApp()->getTwitch()->getOrAddChannel(si.channelName));
              split->setFilters(si.filters);
              splitContainer->insertSplit(split);
              splitContainer->setSelected(split);
@@ -489,7 +498,7 @@ void Window::addShortcuts()
         {"toggleLocalR9K",
          [](std::vector<QString>) -> QString {
              getSettings()->hideSimilar.setValue(!getSettings()->hideSimilar);
-             getIApp()->getWindows()->forceLayoutChannelViews();
+             getApp()->getWindows()->forceLayoutChannelViews();
              return "";
          }},
         {"openQuickSwitcher",
@@ -609,7 +618,7 @@ void Window::addShortcuts()
              }
              else if (mode == 2)
              {
-                 if (isInStreamerMode())
+                 if (getApp()->getStreamerMode()->isEnabled())
                  {
                      getSettings()->enableStreamerMode.setValue(
                          StreamerModeSetting::Disabled);
@@ -633,54 +642,33 @@ void Window::addShortcuts()
 
              if (arg == "off")
              {
-                 this->notebook_->setShowTabs(false);
-                 getSettings()->tabVisibility.setValue(
-                     NotebookTabVisibility::AllTabs);
+                 this->notebook_->hideAllTabsAction->trigger();
              }
              else if (arg == "on")
              {
-                 this->notebook_->setShowTabs(true);
-                 getSettings()->tabVisibility.setValue(
-                     NotebookTabVisibility::AllTabs);
+                 this->notebook_->showAllTabsAction->trigger();
              }
              else if (arg == "toggle")
              {
-                 this->notebook_->setShowTabs(!this->notebook_->getShowTabs());
-                 getSettings()->tabVisibility.setValue(
-                     NotebookTabVisibility::AllTabs);
+                 this->notebook_->toggleTabVisibility();
              }
              else if (arg == "liveOnly")
              {
-                 this->notebook_->setShowTabs(true);
-                 getSettings()->tabVisibility.setValue(
-                     NotebookTabVisibility::LiveOnly);
+                 this->notebook_->onlyShowLiveTabsAction->trigger();
              }
              else if (arg == "toggleLiveOnly")
              {
-                 if (!this->notebook_->getShowTabs())
-                 {
-                     // Tabs are currently hidden, so the intention is to show
-                     // tabs again before enabling the live only setting
-                     this->notebook_->setShowTabs(true);
-                     getSettings()->tabVisibility.setValue(
-                         NotebookTabVisibility::LiveOnly);
-                 }
-                 else
-                 {
-                     getSettings()->tabVisibility.setValue(
-                         getSettings()->tabVisibility.getEnum() ==
-                                 NotebookTabVisibility::LiveOnly
-                             ? NotebookTabVisibility::AllTabs
-                             : NotebookTabVisibility::LiveOnly);
-                 }
+                 // NOOP: Removed 2024-08-04 https://github.com/Chatterino/chatterino2/pull/5530
+                 return "toggleLiveOnly is no longer a valid argument for "
+                        "setTabVisibility";
              }
              else
              {
                  qCWarning(chatterinoHotkeys)
                      << "Invalid argument for setTabVisibility hotkey: " << arg;
                  return QString("Invalid argument for setTabVisibility hotkey: "
-                                "%1. Use \"on\", \"off\", \"toggle\", "
-                                "\"liveOnly\", or \"toggleLiveOnly\".")
+                                "%1. Use \"on\", \"off\", \"toggle\", or "
+                                "\"liveOnly\".")
                      .arg(arg);
              }
 
@@ -690,7 +678,7 @@ void Window::addShortcuts()
 
     this->addDebugStuff(actions);
 
-    this->shortcuts_ = getIApp()->getHotkeys()->shortcutsForCategory(
+    this->shortcuts_ = getApp()->getHotkeys()->shortcutsForCategory(
         HotkeyCategory::Window, actions, this);
 }
 
@@ -701,6 +689,14 @@ void Window::addMenuBar()
 
     // First menu.
     QMenu *menu = mainMenu->addMenu(QString());
+
+    // About button that shows the About tab in the Settings Dialog.
+    QAction *about = menu->addAction(QString());
+    about->setMenuRole(QAction::AboutRole);
+    connect(about, &QAction::triggered, this, [this] {
+        SettingsDialog::showDialog(this, SettingsDialogPreference::About);
+    });
+
     QAction *prefs = menu->addAction(QString());
     prefs->setMenuRole(QAction::PreferencesRole);
     connect(prefs, &QAction::triggered, this, [this] {
@@ -709,6 +705,13 @@ void Window::addMenuBar()
 
     // Window menu.
     QMenu *windowMenu = mainMenu->addMenu(QString("Window"));
+
+    // Window->Minimize item
+    QAction *minimizeWindow = windowMenu->addAction(QString("Minimize"));
+    minimizeWindow->setShortcuts({QKeySequence("Meta+M")});
+    connect(minimizeWindow, &QAction::triggered, this, [this] {
+        this->setWindowState(Qt::WindowMinimized);
+    });
 
     QAction *nextTab = windowMenu->addAction(QString("Select next tab"));
     nextTab->setShortcuts({QKeySequence("Meta+Tab")});
@@ -721,11 +724,32 @@ void Window::addMenuBar()
     connect(prevTab, &QAction::triggered, this, [this] {
         this->notebook_->selectPreviousTab();
     });
+
+    // Help menu.
+    QMenu *helpMenu = mainMenu->addMenu(QString("Help"));
+
+    // Help->Chatterino Wiki item
+    QAction *helpWiki = helpMenu->addAction(QString("Chatterino Wiki"));
+    connect(helpWiki, &QAction::triggered, this, []() {
+        QDesktopServices::openUrl(QUrl(LINK_CHATTERINO_WIKI.toString()));
+    });
+
+    // Help->Chatterino Github
+    QAction *helpGithub = helpMenu->addAction(QString("Chatterino GitHub"));
+    connect(helpGithub, &QAction::triggered, this, []() {
+        QDesktopServices::openUrl(QUrl(LINK_CHATTERINO_SOURCE.toString()));
+    });
+
+    // Help->Chatterino Discord
+    QAction *helpDiscord = helpMenu->addAction(QString("Chatterino Discord"));
+    connect(helpDiscord, &QAction::triggered, this, []() {
+        QDesktopServices::openUrl(QUrl(LINK_CHATTERINO_DISCORD.toString()));
+    });
 }
 
 void Window::onAccountSelected()
 {
-    auto user = getIApp()->getAccounts()->twitch.getCurrent();
+    auto user = getApp()->getAccounts()->twitch.getCurrent();
 
     // update title (also append username on Linux and MacOS)
     QString windowTitle = Version::instance().fullVersion();

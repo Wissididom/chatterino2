@@ -9,21 +9,15 @@
 #include "messages/Selection.hpp"
 #include "providers/colors/ColorProvider.hpp"
 #include "singletons/Settings.hpp"
+#include "singletons/StreamerMode.hpp"
 #include "singletons/WindowManager.hpp"
 #include "util/DebugCount.hpp"
-#include "util/StreamerMode.hpp"
 
 #include <QApplication>
 #include <QDebug>
 #include <QPainter>
 #include <QtGlobal>
 #include <QThread>
-
-#define MARGIN_LEFT (int)(8 * this->scale)
-#define MARGIN_RIGHT (int)(8 * this->scale)
-#define MARGIN_TOP (int)(4 * this->scale)
-#define MARGIN_BOTTOM (int)(4 * this->scale)
-#define COMPACT_EMOTES_OFFSET 6
 
 namespace chatterino {
 
@@ -74,7 +68,9 @@ int MessageLayout::getWidth() const
 
 // Layout
 // return true if redraw is required
-bool MessageLayout::layout(int width, float scale, MessageElementFlags flags)
+bool MessageLayout::layout(int width, float scale, float imageScale,
+                           MessageElementFlags flags,
+                           bool shouldInvalidateBuffer)
 {
     //    BenchmarkGuard benchmark("MessageLayout::layout()");
 
@@ -86,7 +82,7 @@ bool MessageLayout::layout(int width, float scale, MessageElementFlags flags)
     this->currentLayoutWidth_ = width;
 
     // check if layout state changed
-    const auto layoutGeneration = getIApp()->getWindows()->getGeneration();
+    const auto layoutGeneration = getApp()->getWindows()->getGeneration();
     if (this->layoutState_ != layoutGeneration)
     {
         layoutRequired = true;
@@ -105,9 +101,16 @@ bool MessageLayout::layout(int width, float scale, MessageElementFlags flags)
     // check if dpi changed
     layoutRequired |= this->scale_ != scale;
     this->scale_ = scale;
+    layoutRequired |= this->imageScale_ != imageScale;
+    this->imageScale_ = imageScale;
 
     if (!layoutRequired)
     {
+        if (shouldInvalidateBuffer)
+        {
+            this->invalidateBuffer();
+            return true;
+        }
         return false;
     }
 
@@ -142,7 +145,8 @@ void MessageLayout::actuallyLayout(int width, MessageElementFlags flags)
     bool hideSimilar = getSettings()->hideSimilar;
     bool hideReplies = !flags.has(MessageElementFlag::RepliedMessage);
 
-    this->container_.beginLayout(width, this->scale_, messageFlags);
+    this->container_.beginLayout(width, this->scale_, this->imageScale_,
+                                 messageFlags);
 
     for (const auto &element : this->message_->elements)
     {
@@ -154,11 +158,9 @@ void MessageLayout::actuallyLayout(int width, MessageElementFlags flags)
         if (this->message_->flags.has(MessageFlag::Timeout) ||
             this->message_->flags.has(MessageFlag::Untimeout))
         {
-            // This condition has been set up to execute isInStreamerMode() as the last thing
-            // as it could end up being expensive.
             if (hideModerationActions ||
                 (getSettings()->streamerModeHideModActions &&
-                 isInStreamerMode()))
+                 getApp()->getStreamerMode()->isEnabled()))
             {
                 continue;
             }
@@ -284,16 +286,11 @@ QPixmap *MessageLayout::ensureBuffer(QPainter &painter, int width)
     }
 
     // Create new buffer
-#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     this->buffer_ = std::make_unique<QPixmap>(
         int(width * painter.device()->devicePixelRatioF()),
         int(this->container_.getHeight() *
             painter.device()->devicePixelRatioF()));
     this->buffer_->setDevicePixelRatio(painter.device()->devicePixelRatioF());
-#else
-    this->buffer_ = std::make_unique<QPixmap>(
-        width, std::max(16, this->container_.getHeight()));
-#endif
 
     this->bufferValid_ = false;
     DebugCount::increase("message drawing buffers");
@@ -369,7 +366,19 @@ void MessageLayout::updateBuffer(QPixmap *buffer,
     else if (this->message_->flags.has(MessageFlag::AutoMod) ||
              this->message_->flags.has(MessageFlag::LowTrustUsers))
     {
-        backgroundColor = QColor("#404040");
+        if (ctx.preferences.enableAutomodHighlight &&
+            (this->message_->flags.has(MessageFlag::AutoModOffendingMessage) ||
+             this->message_->flags.has(
+                 MessageFlag::AutoModOffendingMessageHeader)))
+        {
+            backgroundColor = blendColors(
+                backgroundColor,
+                *ctx.colorProvider.color(ColorType::AutomodHighlight));
+        }
+        else
+        {
+            backgroundColor = QColor("#404040");
+        }
     }
     else if (this->message_->flags.has(MessageFlag::Debug))
     {
@@ -427,10 +436,29 @@ void MessageLayout::deleteCache()
 // returns nullptr if none was found
 
 // fourtf: this should return a MessageLayoutItem
-const MessageLayoutElement *MessageLayout::getElementAt(QPoint point)
+const MessageLayoutElement *MessageLayout::getElementAt(QPoint point) const
 {
     // go through all words and return the first one that contains the point.
     return this->container_.getElementAt(point);
+}
+
+std::pair<int, int> MessageLayout::getWordBounds(
+    const MessageLayoutElement *hoveredElement, QPoint relativePos) const
+{
+    // An element with wordId != -1 can be multiline, so we need to check all
+    // elements in the container
+    if (hoveredElement->getWordId() != -1)
+    {
+        return this->container_.getWordBounds(hoveredElement);
+    }
+
+    const auto wordStart = this->getSelectionIndex(relativePos) -
+                           hoveredElement->getMouseOverIndex(relativePos);
+    const auto selectionLength = hoveredElement->getSelectionIndexCount();
+    const auto length = hoveredElement->hasTrailingSpace() ? selectionLength - 1
+                                                           : selectionLength;
+
+    return {wordStart, wordStart + length};
 }
 
 size_t MessageLayout::getLastCharacterIndex() const

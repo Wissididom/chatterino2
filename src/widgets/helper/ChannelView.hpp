@@ -4,14 +4,17 @@
 #include "messages/layouts/MessageLayoutContext.hpp"
 #include "messages/LimitedQueue.hpp"
 #include "messages/LimitedQueueSnapshot.hpp"
+#include "messages/MessageFlag.hpp"
 #include "messages/Selection.hpp"
 #include "util/ThreadGuard.hpp"
 #include "widgets/BaseWidget.hpp"
 #include "widgets/TooltipWidget.hpp"
 
 #include <pajlada/signals/signal.hpp>
+#include <QGestureEvent>
 #include <QMenu>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QScroller>
 #include <QTimer>
 #include <QVariantAnimation>
@@ -30,9 +33,6 @@ using ChannelPtr = std::shared_ptr<Channel>;
 struct Message;
 using MessagePtr = std::shared_ptr<const Message>;
 
-enum class MessageFlag : int64_t;
-using MessageFlags = FlagsEnum<MessageFlag>;
-
 class MessageLayout;
 using MessageLayoutPtr = std::shared_ptr<MessageLayout>;
 
@@ -46,6 +46,8 @@ class MessageLayoutElement;
 class Split;
 class FilterSet;
 using FilterSetPtr = std::shared_ptr<FilterSet>;
+
+class LinkInfo;
 
 enum class PauseReason {
     Mouse,
@@ -136,19 +138,49 @@ public:
 
     MessageElementFlags getFlags() const;
 
+    /// @brief The virtual channel used to display messages
+    ///
+    /// This channel contains all messages in this view and respects the
+    /// filter settings. It will always be of type Channel, not TwitchChannel
+    /// nor IrcChannel.
+    /// It's **not** equal to the channel passed in #setChannel().
+    /// @see #underlyingChannel()
     ChannelPtr channel();
+
+    /// @brief The channel this view displays messages for
+    ///
+    /// This channel potentially contains more messages than visible in this
+    /// view due to filter settings.
+    /// It's equal to the channel passed in #setChannel().
+    /// @see #channel()
+    ChannelPtr underlyingChannel() const;
+
+    /// @brief Set the channel this view is displaying
+    ///
+    /// @see #underlyingChannel()
     void setChannel(const ChannelPtr &underlyingChannel);
 
     void setFilters(const QList<QUuid> &ids);
     QList<QUuid> getFilterIds() const;
     FilterSetPtr getFilterSet() const;
 
+    /// @brief The channel this is derived from
+    ///
+    /// In case of "nested" channel views such as in user popups,
+    /// this channel is set to the original channel the messages came from,
+    /// which is used to open user popups from this view.
+    /// It's not always set.
+    /// @see #hasSourceChannel()
     ChannelPtr sourceChannel() const;
+    /// Setter for #sourceChannel()
     void setSourceChannel(ChannelPtr sourceChannel);
+    /// Checks if this view has a #sourceChannel
     bool hasSourceChannel() const;
 
     LimitedQueueSnapshot<MessageLayoutPtr> &getMessagesSnapshot();
+
     void queueLayout();
+    void invalidateBuffers();
 
     void clearMessages();
 
@@ -193,6 +225,9 @@ protected:
     void enterEvent(QEvent * /*event*/) override;
 #endif
     void leaveEvent(QEvent * /*event*/) override;
+
+    bool event(QEvent *event) override;
+    bool gestureEvent(const QGestureEvent *event);
 
     void mouseMoveEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
@@ -270,6 +305,7 @@ private:
     bool canReplyToMessages() const;
 
     bool layoutQueued_ = false;
+    bool bufferInvalidationQueued_ = false;
 
     bool lastMessageHasAlternateBackground_ = false;
     bool lastMessageHasAlternateBackgroundReverse_ = true;
@@ -294,8 +330,31 @@ private:
     ThreadGuard snapshotGuard_;
     LimitedQueueSnapshot<MessageLayoutPtr> snapshot_;
 
+    /// @brief The backing (internal) channel
+    ///
+    /// This is a "virtual" channel where all filtered messages from
+    /// @a underlyingChannel_ are added to. It contains messages visible on
+    /// screen and will always be a @a Channel, or, it will never be a
+    /// TwitchChannel or IrcChannel, however, it will have the same type and
+    /// name as @a underlyingChannel_. It's not know to any registry/server.
     ChannelPtr channel_ = nullptr;
+
+    /// @brief The channel receiving messages
+    ///
+    /// This channel is the one passed in #setChannel(). It's known to the
+    /// respective registry (e.g. TwitchIrcServer). For Twitch channels for
+    /// example, this will be an instance of TwitchChannel. This channel might
+    /// contain more messages than visible if filters are active.
     ChannelPtr underlyingChannel_ = nullptr;
+
+    /// @brief The channel @a underlyingChannel_ is derived from
+    ///
+    /// In case of "nested" channel views such as in user popups,
+    /// this channel is set to the original channel the messages came from,
+    /// which is used to open user popups from this view.
+    ///
+    /// @see #sourceChannel()
+    /// @see #hasSourceChannel()
     ChannelPtr sourceChannel_ = nullptr;
     Split *split_;
 
@@ -328,6 +387,7 @@ private:
     QTimer clickTimer_;
 
     bool isScrolling_ = false;
+    bool isPanning_ = false;
     QPointF lastMiddlePressPosition_;
     QPointF currentMousePosition_;
     QTimer scrollTimer_;
@@ -363,6 +423,17 @@ private:
     void scrollUpdateRequested();
 
     TooltipWidget *const tooltipWidget_{};
+
+    /// Pointer to a link info that hasn't loaded yet
+    QPointer<LinkInfo> pendingLinkInfo_;
+
+    /// @brief Sets the tooltip to contain the link info
+    ///
+    /// If the info isn't loaded yet, it's tracked until it's resolved or errored.
+    void setLinkInfoTooltip(LinkInfo *info);
+
+    /// Slot for the LinkInfo::stateChanged signal.
+    void pendingLinkInfoStateChanged();
 };
 
 }  // namespace chatterino

@@ -1,7 +1,7 @@
 #include "providers/liveupdates/BasicPubSubClient.hpp"
 #include "providers/liveupdates/BasicPubSubManager.hpp"
+#include "Test.hpp"
 
-#include <gtest/gtest.h>
 #include <QByteArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -68,7 +68,7 @@ class MyManager : public BasicPubSubManager<DummySubscription>
 {
 public:
     MyManager(QString host)
-        : BasicPubSubManager(std::move(host))
+        : BasicPubSubManager(std::move(host), "Test")
     {
     }
 

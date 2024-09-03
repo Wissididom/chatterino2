@@ -2,7 +2,9 @@
 #include "controllers/accounts/AccountController.hpp"
 #include "controllers/highlights/HighlightController.hpp"
 #include "messages/Emote.hpp"
-#include "mocks/EmptyApplication.hpp"
+#include "mocks/BaseApplication.hpp"
+#include "mocks/DisabledStreamerMode.hpp"
+#include "mocks/LinkResolver.hpp"
 #include "mocks/TwitchIrcServer.hpp"
 #include "mocks/UserData.hpp"
 #include "providers/bttv/BttvEmotes.hpp"
@@ -12,6 +14,7 @@
 #include "providers/recentmessages/Impl.hpp"
 #include "providers/seventv/SeventvBadges.hpp"
 #include "providers/seventv/SeventvEmotes.hpp"
+#include "providers/twitch/TwitchBadges.hpp"
 #include "providers/twitch/TwitchChannel.hpp"
 #include "singletons/Emotes.hpp"
 #include "singletons/Resources.hpp"
@@ -29,9 +32,14 @@ using namespace literals;
 
 namespace {
 
-class MockApplication : mock::EmptyApplication
+class MockApplication : public mock::BaseApplication
 {
 public:
+    MockApplication()
+        : highlights(this->settings, &this->accounts)
+    {
+    }
+
     IEmotes *getEmotes() override
     {
         return &this->emotes;
@@ -72,14 +80,50 @@ public:
         return &this->highlights;
     }
 
+    TwitchBadges *getTwitchBadges() override
+    {
+        return &this->twitchBadges;
+    }
+
+    BttvEmotes *getBttvEmotes() override
+    {
+        return &this->bttvEmotes;
+    }
+
+    FfzEmotes *getFfzEmotes() override
+    {
+        return &this->ffzEmotes;
+    }
+
+    SeventvEmotes *getSeventvEmotes() override
+    {
+        return &this->seventvEmotes;
+    }
+
+    IStreamerMode *getStreamerMode() override
+    {
+        return &this->streamerMode;
+    }
+
+    ILinkResolver *getLinkResolver() override
+    {
+        return &this->linkResolver;
+    }
+
     AccountController accounts;
     Emotes emotes;
     mock::UserDataController userData;
     mock::MockTwitchIrcServer twitch;
+    mock::EmptyLinkResolver linkResolver;
     ChatterinoBadges chatterinoBadges;
     FfzBadges ffzBadges;
     SeventvBadges seventvBadges;
     HighlightController highlights;
+    TwitchBadges twitchBadges;
+    BttvEmotes bttvEmotes;
+    FfzEmotes ffzEmotes;
+    SeventvEmotes seventvEmotes;
+    DisabledStreamerMode streamerMode;
 };
 
 std::optional<QJsonDocument> tryReadJsonFile(const QString &path)

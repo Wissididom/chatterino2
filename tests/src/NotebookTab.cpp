@@ -3,13 +3,12 @@
 #include "common/Literals.hpp"
 #include "controllers/hotkeys/HotkeyController.hpp"
 #include "gmock/gmock.h"
-#include "mocks/EmptyApplication.hpp"
+#include "mocks/BaseApplication.hpp"
 #include "singletons/Fonts.hpp"
 #include "singletons/Theme.hpp"
+#include "Test.hpp"
 #include "widgets/Notebook.hpp"
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <QDebug>
 #include <QString>
 
@@ -18,9 +17,14 @@ using ::testing::Exactly;
 
 namespace {
 
-class MockApplication : mock::EmptyApplication
+class MockApplication : public mock::BaseApplication
 {
 public:
+    MockApplication()
+        : theme(this->paths_)
+        , fonts(this->settings)
+    {
+    }
     Theme *getThemes() override
     {
         return &this->theme;

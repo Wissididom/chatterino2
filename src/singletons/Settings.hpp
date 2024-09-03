@@ -15,7 +15,6 @@
 #include "controllers/sound/ISoundController.hpp"
 #include "singletons/Toasts.hpp"
 #include "util/RapidJsonSerializeQString.hpp"
-#include "util/StreamerMode.hpp"
 #include "widgets/Notebook.hpp"
 
 #include <pajlada/settings/setting.hpp>
@@ -26,6 +25,21 @@ using TimeoutButton = std::pair<QString, int>;
 
 namespace chatterino {
 
+class Args;
+
+#ifdef Q_OS_WIN32
+#    define DEFAULT_FONT_FAMILY "Segoe UI"
+#    define DEFAULT_FONT_SIZE 10
+#else
+#    ifdef Q_OS_MACOS
+#        define DEFAULT_FONT_FAMILY "Helvetica Neue"
+#        define DEFAULT_FONT_SIZE 12
+#    else
+#        define DEFAULT_FONT_FAMILY "Arial"
+#        define DEFAULT_FONT_SIZE 11
+#    endif
+#endif
+
 void _actuallyRegisterSetting(
     std::weak_ptr<pajlada::Settings::SettingData> setting);
 
@@ -33,19 +47,6 @@ enum UsernameDisplayMode : int {
     Username = 1,                  // Username
     LocalizedName = 2,             // Localized name
     UsernameAndLocalizedName = 3,  // Username (Localized name)
-};
-
-enum HelixTimegateOverride : int {
-    // Use the default timegated behaviour
-    // This means we use the old IRC command up until the migration date and
-    // switch over to the Helix API only after the migration date
-    Timegate = 1,
-
-    // Ignore timegating and always force use the IRC command
-    AlwaysUseIRC = 2,
-
-    // Ignore timegating and always force use the Helix API
-    AlwaysUseHelix = 3,
 };
 
 enum ThumbnailPreviewMode : int {
@@ -62,6 +63,18 @@ enum UsernameRightClickBehavior : int {
     Ignore = 2,
 };
 
+enum class ChatSendProtocol : int {
+    Default = 0,
+    IRC = 1,
+    Helix = 2,
+};
+
+enum StreamerModeSetting {
+    Disabled = 0,
+    Enabled = 1,
+    DetectStreamingSoftware = 2,
+};
+
 /// Settings which are availlable for reading and writing on the gui thread.
 // These settings are still accessed concurrently in the code but it is bad practice.
 class Settings
@@ -69,11 +82,18 @@ class Settings
     static Settings *instance_;
     Settings *prevInstance_ = nullptr;
 
+    const bool disableSaving;
+
 public:
-    Settings(const QString &settingsDirectory);
+    Settings(const Args &args, const QString &settingsDirectory);
     ~Settings();
 
     static Settings &instance();
+
+    /// Request the settings to be saved to file
+    ///
+    /// Depending on the launch options, a save might end up not happening
+    void requestSave() const;
 
     void saveSnapshot();
     void restoreSnapshot();
@@ -123,6 +143,14 @@ public:
 
     //    BoolSetting collapseLongMessages =
     //    {"/appearance/messages/collapseLongMessages", false};
+    QStringSetting chatFontFamily{
+        "/appearance/currentFontFamily",
+        DEFAULT_FONT_FAMILY,
+    };
+    IntSetting chatFontSize{
+        "/appearance/currentFontSize",
+        DEFAULT_FONT_SIZE,
+    };
     BoolSetting hideReplyContext = {"/appearance/hideReplyContext", false};
     BoolSetting showReplyButton = {"/appearance/showReplyButton", false};
     BoolSetting stripReplyMention = {"/appearance/stripReplyMention", true};
@@ -218,6 +246,10 @@ public:
         "/behaviour/autocompletion/emoteCompletionWithColon", true};
     BoolSetting showUsernameCompletionMenu = {
         "/behaviour/autocompletion/showUsernameCompletionMenu", true};
+    BoolSetting alwaysIncludeBroadcasterInUserCompletions = {
+        "/behaviour/autocompletion/alwaysIncludeBroadcasterInUserCompletions",
+        true,
+    };
     BoolSetting useSmartEmoteCompletion = {
         "/experiments/useSmartEmoteCompletion",
         false,
@@ -379,6 +411,10 @@ public:
         "/highlighting/automod/enabled",
         true,
     };
+    BoolSetting showAutomodInMentions = {
+        "/highlighting/automod/showInMentions",
+        false,
+    };
     BoolSetting enableAutomodHighlightSound = {
         "/highlighting/automod/enableSound",
         false,
@@ -391,6 +427,7 @@ public:
         "/highlighting/automod/soundUrl",
         "",
     };
+    QStringSetting automodHighlightColor = {"/highlighting/automod/color", ""};
 
     BoolSetting enableThreadHighlight = {
         "/highlighting/thread/nameIsHighlightKeyword", true};
@@ -419,6 +456,10 @@ public:
     BoolSetting enableLogging = {"/logging/enabled", false};
     BoolSetting onlyLogListedChannels = {"/logging/onlyLogListedChannels",
                                          false};
+    BoolSetting separatelyStoreStreamLogs = {
+        "/logging/separatelyStoreStreamLogs",
+        false,
+    };
 
     QStringSetting logPath = {"/logging/path", ""};
 
@@ -443,6 +484,8 @@ public:
                                             "qrc:/sounds/ping3.wav"};
     BoolSetting notificationOnAnyChannel = {"/notifications/onAnyChannel",
                                             false};
+    BoolSetting suppressInitialLiveNotification = {
+        "/notifications/suppressInitialLive", false};
 
     BoolSetting notificationToast = {"/notifications/enableToast", false};
     IntSetting openFromToast = {"/notifications/openFromToast",
@@ -477,7 +520,6 @@ public:
 #ifdef Q_OS_LINUX
     BoolSetting useKeyring = {"/misc/useKeyring", true};
 #endif
-    BoolSetting enableExperimentalIrc = {"/misc/experimentalIrc", false};
 
     IntSetting startUpNotification = {"/misc/startUpNotification", 0};
     QStringSetting currentVersion = {"/misc/currentVersion", ""};
@@ -497,28 +539,8 @@ public:
         1000,
     };
 
-    // Temporary time-gate-overrides
-    EnumSetting<HelixTimegateOverride> helixTimegateRaid = {
-        "/misc/twitch/helix-timegate/raid",
-        HelixTimegateOverride::Timegate,
-    };
-    EnumSetting<HelixTimegateOverride> helixTimegateWhisper = {
-        "/misc/twitch/helix-timegate/whisper",
-        HelixTimegateOverride::Timegate,
-    };
-    EnumSetting<HelixTimegateOverride> helixTimegateVIPs = {
-        "/misc/twitch/helix-timegate/vips",
-        HelixTimegateOverride::Timegate,
-    };
-    EnumSetting<HelixTimegateOverride> helixTimegateModerators = {
-        "/misc/twitch/helix-timegate/moderators",
-        HelixTimegateOverride::Timegate,
-    };
-
-    EnumSetting<HelixTimegateOverride> helixTimegateCommercial = {
-        "/misc/twitch/helix-timegate/commercial",
-        HelixTimegateOverride::Timegate,
-    };
+    EnumStringSetting<ChatSendProtocol> chatSendProtocol = {
+        "/misc/chatSendProtocol", ChatSendProtocol::Default};
 
     BoolSetting openLinksIncognito = {"/misc/openLinksIncognito", 0};
 
@@ -534,14 +556,7 @@ public:
                                                true};
     BoolSetting lockNotebookLayout = {"/misc/lockNotebookLayout", false};
 
-    /// Debug
-    BoolSetting showUnhandledIrcMessages = {"/debug/showUnhandledIrcMessages",
-                                            false};
-
     /// UI
-    // Purely QOL settings are here (like last item in a list).
-    IntSetting lastSelectChannelTab = {"/ui/lastSelectChannelTab", 0};
-    IntSetting lastSelectIrcConn = {"/ui/lastSelectIrcConn", 0};
 
     BoolSetting showSendButton = {"/ui/showSendButton", false};
 

@@ -7,13 +7,14 @@
 #include "messages/Message.hpp"
 #include "messages/MessageBuilder.hpp"
 #include "messages/MessageElement.hpp"
-#include "providers/irc/IrcChannel2.hpp"
-#include "providers/irc/IrcServer.hpp"
+#include "providers/bttv/BttvEmotes.hpp"
+#include "providers/ffz/FfzEmotes.hpp"
 #include "providers/twitch/api/Helix.hpp"
 #include "providers/twitch/TwitchAccount.hpp"
 #include "providers/twitch/TwitchIrcServer.hpp"
 #include "singletons/Emotes.hpp"
 #include "singletons/Settings.hpp"
+#include "singletons/StreamerMode.hpp"
 #include "singletons/Theme.hpp"
 #include "util/Twitch.hpp"
 
@@ -99,21 +100,21 @@ bool appendWhisperMessageWordsLocally(const QStringList &words)
         MessageElementFlag::Text, MessageColor::Text,
         FontStyle::ChatMediumBold);
     b.emplace<TextElement>("->", MessageElementFlag::Text,
-                           getIApp()->getThemes()->messages.textColors.system);
+                           getApp()->getThemes()->messages.textColors.system);
     b.emplace<TextElement>(words[1] + ":", MessageElementFlag::Text,
                            MessageColor::Text, FontStyle::ChatMediumBold);
 
     const auto &acc = app->getAccounts()->twitch.getCurrent();
     const auto &accemotes = *acc->accessEmotes();
-    const auto &bttvemotes = app->twitch->getBttvEmotes();
-    const auto &ffzemotes = app->twitch->getFfzEmotes();
+    const auto *bttvemotes = app->getBttvEmotes();
+    const auto *ffzemotes = app->getFfzEmotes();
     auto flags = MessageElementFlags();
     auto emote = std::optional<EmotePtr>{};
     for (int i = 2; i < words.length(); i++)
     {
         {  // Twitch emote
-            auto it = accemotes.emotes.find({words[i]});
-            if (it != accemotes.emotes.end())
+            auto it = accemotes->find({words[i]});
+            if (it != accemotes->end())
             {
                 b.emplace<EmoteElement>(it->second,
                                         MessageElementFlag::TwitchEmote);
@@ -122,14 +123,15 @@ bool appendWhisperMessageWordsLocally(const QStringList &words)
         }  // Twitch emote
 
         {  // bttv/ffz emote
-            if ((emote = bttvemotes.emote({words[i]})))
+            if ((emote = bttvemotes->emote({words[i]})))
             {
                 flags = MessageElementFlag::BttvEmote;
             }
-            else if ((emote = ffzemotes.emote({words[i]})))
+            else if ((emote = ffzemotes->emote({words[i]})))
             {
                 flags = MessageElementFlag::FfzEmote;
             }
+            // TODO: Load 7tv global emotes
             if (emote)
             {
                 b.emplace<EmoteElement>(*emote, flags);
@@ -148,10 +150,10 @@ bool appendWhisperMessageWordsLocally(const QStringList &words)
                     void operator()(const QString &string,
                                     MessageBuilder &b) const
                     {
-                        LinkParser parser(string);
-                        if (parser.result())
+                        auto link = linkparser::parse(string);
+                        if (link)
                         {
-                            b.addLink(*parser.result());
+                            b.addLink(*link, string);
                         }
                         else
                         {
@@ -173,19 +175,16 @@ bool appendWhisperMessageWordsLocally(const QStringList &words)
     b->flags.set(MessageFlag::Whisper);
     auto messagexD = b.release();
 
-    app->twitch->whispersChannel->addMessage(messagexD);
-
-    auto overrideFlags = std::optional<MessageFlags>(messagexD->flags);
-    overrideFlags->set(MessageFlag::DoNotLog);
+    getApp()->getTwitch()->getWhispersChannel()->addMessage(
+        messagexD, MessageContext::Original);
 
     if (getSettings()->inlineWhispers &&
         !(getSettings()->streamerModeSuppressInlineWhispers &&
-          isInStreamerMode()))
+          getApp()->getStreamerMode()->isEnabled()))
     {
-        app->twitch->forEachChannel(
-            [&messagexD, overrideFlags](ChannelPtr _channel) {
-                _channel->addMessage(messagexD, overrideFlags);
-            });
+        app->getTwitch()->forEachChannel([&messagexD](ChannelPtr _channel) {
+            _channel->addMessage(messagexD, MessageContext::Repost);
+        });
     }
 
     return true;
@@ -204,16 +203,15 @@ QString sendWhisper(const CommandContext &ctx)
 
     if (ctx.words.size() < 3)
     {
-        ctx.channel->addMessage(
-            makeSystemMessage("Usage: /w <username> <message>"));
+        ctx.channel->addSystemMessage("Usage: /w <username> <message>");
         return "";
     }
 
-    auto currentUser = getIApp()->getAccounts()->twitch.getCurrent();
+    auto currentUser = getApp()->getAccounts()->twitch.getCurrent();
     if (currentUser->isAnon())
     {
-        ctx.channel->addMessage(
-            makeSystemMessage("You must be logged in to send a whisper!"));
+        ctx.channel->addSystemMessage(
+            "You must be logged in to send a whisper!");
         return "";
     }
     auto target = ctx.words.at(1);
@@ -232,26 +230,14 @@ QString sendWhisper(const CommandContext &ctx)
                     },
                     [channel, target, targetUser](auto error, auto message) {
                         auto errorMessage = formatWhisperError(error, message);
-                        channel->addMessage(makeSystemMessage(errorMessage));
+                        channel->addSystemMessage(errorMessage);
                     });
             },
             [channel{ctx.channel}] {
-                channel->addMessage(
-                    makeSystemMessage("No user matching that username."));
+                channel->addSystemMessage("No user matching that username.");
             });
         return "";
     }
-
-    // we must be on IRC
-    auto *ircChannel = dynamic_cast<IrcChannel *>(ctx.channel.get());
-    if (ircChannel == nullptr)
-    {
-        // give up
-        return "";
-    }
-
-    auto *server = ircChannel->server();
-    server->sendWhisper(target, message);
 
     return "";
 }

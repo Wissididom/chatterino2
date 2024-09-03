@@ -2,6 +2,7 @@
 
 #include "Application.hpp"
 #include "common/Literals.hpp"
+#include "common/Modes.hpp"
 #include "common/QLogging.hpp"
 #include "debug/AssertInGuiThread.hpp"
 #include "providers/twitch/TwitchIrcServer.hpp"
@@ -40,7 +41,7 @@ void registerNmManifest(const Paths &paths, const QString &manifestFilename,
 
 void registerNmHost(const Paths &paths)
 {
-    if (paths.isPortable())
+    if (Modes::instance().isPortable)
     {
         return;
     }
@@ -133,6 +134,22 @@ namespace nm::client {
 NativeMessagingServer::NativeMessagingServer()
     : thread(*this)
 {
+    this->thread.setObjectName("NativeMessagingReceiver");
+}
+
+NativeMessagingServer::~NativeMessagingServer()
+{
+    if (!ipc::IpcQueue::remove("chatterino_gui"))
+    {
+        qCWarning(chatterinoNativeMessage) << "Failed to remove message queue";
+    }
+    this->thread.requestInterruption();
+    this->thread.quit();
+    // Most likely, the receiver thread will still wait for a message
+    if (!this->thread.wait(250))
+    {
+        this->thread.terminate();
+    }
 }
 
 void NativeMessagingServer::start()
@@ -160,7 +177,7 @@ void NativeMessagingServer::ReceiverThread::run()
         return;
     }
 
-    while (true)
+    while (!this->isInterruptionRequested())
     {
         auto buf = messageQueue->receive();
         if (buf.isEmpty())
@@ -235,14 +252,12 @@ void NativeMessagingServer::ReceiverThread::handleSelect(
     }
 
     postToThread([=] {
-        auto *app = getApp();
-
         if (!name.isEmpty())
         {
-            auto channel = app->twitch->getOrAddChannel(name);
-            if (app->twitch->watchingChannel.get() != channel)
+            auto channel = getApp()->getTwitch()->getOrAddChannel(name);
+            if (getApp()->getTwitch()->getWatchingChannel().get() != channel)
             {
-                app->twitch->watchingChannel.reset(channel);
+                getApp()->getTwitch()->setWatchingChannel(channel);
             }
         }
 
@@ -252,7 +267,8 @@ void NativeMessagingServer::ReceiverThread::handleSelect(
             auto *window = AttachedWindow::getForeground(args);
             if (!name.isEmpty())
             {
-                window->setChannel(app->twitch->getOrAddChannel(name));
+                window->setChannel(
+                    getApp()->getTwitch()->getOrAddChannel(name));
             }
 #endif
         }
@@ -293,8 +309,6 @@ void NativeMessagingServer::syncChannels(const QJsonArray &twitchChannels)
 {
     assertInGuiThread();
 
-    auto *app = getApp();
-
     std::vector<ChannelPtr> updated;
     updated.reserve(twitchChannels.size());
     for (const auto &value : twitchChannels)
@@ -305,7 +319,7 @@ void NativeMessagingServer::syncChannels(const QJsonArray &twitchChannels)
             continue;
         }
         // the deduping is done on the extension side
-        updated.emplace_back(app->twitch->getOrAddChannel(name));
+        updated.emplace_back(getApp()->getTwitch()->getOrAddChannel(name));
     }
 
     // This will destroy channels that aren't used anymore.

@@ -7,6 +7,7 @@
 #include "messages/Image.hpp"
 #include "providers/twitch/api/Helix.hpp"
 #include "util/DisplayBadge.hpp"
+#include "util/LoadPixmap.hpp"
 
 #include <QBuffer>
 #include <QFile>
@@ -18,22 +19,18 @@
 #include <QThread>
 #include <QUrlQuery>
 
-namespace chatterino {
+namespace {
 
-TwitchBadges::TwitchBadges()
-{
-    this->loadTwitchBadges();
-}
+// From Twitch docs - expected size for a badge (1x)
+constexpr QSize BADGE_BASE_SIZE(18, 18);
+
+}  // namespace
+
+namespace chatterino {
 
 void TwitchBadges::loadTwitchBadges()
 {
     assert(this->loaded_ == false);
-
-    if (!getHelix())
-    {
-        // This is intended for tests and benchmarks.
-        return;
-    }
 
     getHelix()->getGlobalBadges(
         [this](auto globalBadges) {
@@ -48,9 +45,12 @@ void TwitchBadges::loadTwitchBadges()
                         .name = EmoteName{},
                         .images =
                             ImageSet{
-                                Image::fromUrl(version.imageURL1x, 1),
-                                Image::fromUrl(version.imageURL2x, .5),
-                                Image::fromUrl(version.imageURL4x, .25),
+                                Image::fromUrl(version.imageURL1x, 1,
+                                               BADGE_BASE_SIZE),
+                                Image::fromUrl(version.imageURL2x, .5,
+                                               BADGE_BASE_SIZE * 2),
+                                Image::fromUrl(version.imageURL4x, .25,
+                                               BADGE_BASE_SIZE * 4),
                             },
                         .tooltip = Tooltip{version.title},
                         .homePage = version.clickURL,
@@ -111,17 +111,19 @@ void TwitchBadges::parseTwitchBadges(QJsonObject root)
         for (auto vIt = versions.begin(); vIt != versions.end(); ++vIt)
         {
             auto versionObj = vIt.value().toObject();
-
             auto emote = Emote{
                 .name = {""},
                 .images =
                     ImageSet{
                         Image::fromUrl(
-                            {versionObj.value("image_url_1x").toString()}, 1),
+                            {versionObj.value("image_url_1x").toString()}, 1,
+                            BADGE_BASE_SIZE),
                         Image::fromUrl(
-                            {versionObj.value("image_url_2x").toString()}, .5),
+                            {versionObj.value("image_url_2x").toString()}, .5,
+                            BADGE_BASE_SIZE * 2),
                         Image::fromUrl(
-                            {versionObj.value("image_url_4x").toString()}, .25),
+                            {versionObj.value("image_url_4x").toString()}, .25,
+                            BADGE_BASE_SIZE * 4),
                     },
                 .tooltip = Tooltip{versionObj.value("title").toString()},
                 .homePage = Url{versionObj.value("click_url").toString()},
@@ -238,46 +240,20 @@ void TwitchBadges::getBadgeIcons(const QList<DisplayBadge> &badges,
     }
 }
 
-void TwitchBadges::loadEmoteImage(const QString &name, ImagePtr image,
+void TwitchBadges::loadEmoteImage(const QString &name, const ImagePtr &image,
                                   BadgeIconCallback &&callback)
 {
-    NetworkRequest(image->url().string)
-        .concurrent()
-        .cache()
-        .onSuccess([this, name, callback](auto result) {
-            auto data = result.getData();
+    loadPixmapFromUrl(image->url(),
+                      [this, name, callback{std::move(callback)}](auto pixmap) {
+                          auto icon = std::make_shared<QIcon>(pixmap);
 
-            // const cast since we are only reading from it
-            QBuffer buffer(const_cast<QByteArray *>(&data));
-            buffer.open(QIODevice::ReadOnly);
-            QImageReader reader(&buffer);
+                          {
+                              std::unique_lock lock(this->badgesMutex_);
+                              this->badgesMap_[name] = icon;
+                          }
 
-            if (!reader.canRead() || reader.size().isEmpty())
-            {
-                return;
-            }
-
-            QImage image = reader.read();
-            if (image.isNull())
-            {
-                return;
-            }
-
-            if (reader.imageCount() <= 0)
-            {
-                return;
-            }
-
-            auto icon = std::make_shared<QIcon>(QPixmap::fromImage(image));
-
-            {
-                std::unique_lock lock(this->badgesMutex_);
-                this->badgesMap_[name] = icon;
-            }
-
-            callback(name, icon);
-        })
-        .execute();
+                          callback(name, icon);
+                      });
 }
 
 }  // namespace chatterino

@@ -1,11 +1,13 @@
 #include "providers/seventv/SeventvEventAPI.hpp"
 
 #include "Application.hpp"
+#include "common/Literals.hpp"
 #include "providers/seventv/eventapi/Client.hpp"
 #include "providers/seventv/eventapi/Dispatch.hpp"
 #include "providers/seventv/eventapi/Message.hpp"
 #include "providers/seventv/SeventvBadges.hpp"
 #include "providers/seventv/SeventvCosmetics.hpp"
+#include "util/QMagicEnum.hpp"
 
 #include <QJsonArray>
 
@@ -15,12 +17,18 @@ namespace chatterino {
 
 using namespace seventv;
 using namespace seventv::eventapi;
+using namespace chatterino::literals;
 
 SeventvEventAPI::SeventvEventAPI(
     QString host, std::chrono::milliseconds defaultHeartbeatInterval)
-    : BasicPubSubManager(std::move(host))
+    : BasicPubSubManager(std::move(host), u"7TV"_s)
     , heartbeatInterval_(defaultHeartbeatInterval)
 {
+}
+
+SeventvEventAPI::~SeventvEventAPI()
+{
+    this->stop();
 }
 
 void SeventvEventAPI::subscribeUser(const QString &userID,
@@ -228,7 +236,7 @@ void SeventvEventAPI::handleDispatch(const Dispatch &dispatch)
         default: {
             qCDebug(chatterinoSeventvEventAPI)
                 << "Unknown subscription type:"
-                << magic_enum::enum_name(dispatch.type).data()
+                << qmagicenum::enumName(dispatch.type)
                 << "body:" << dispatch.body;
         }
         break;
@@ -347,7 +355,7 @@ void SeventvEventAPI::onUserUpdate(const Dispatch &dispatch)
 
 void SeventvEventAPI::onCosmeticCreate(const CosmeticCreateDispatch &cosmetic)
 {
-    auto *badges = getIApp()->getSeventvBadges();
+    auto *badges = getApp()->getSeventvBadges();
     switch (cosmetic.kind)
     {
         case CosmeticKind::Badge: {
@@ -362,7 +370,7 @@ void SeventvEventAPI::onCosmeticCreate(const CosmeticCreateDispatch &cosmetic)
 void SeventvEventAPI::onEntitlementCreate(
     const EntitlementCreateDeleteDispatch &entitlement)
 {
-    auto *badges = getIApp()->getSeventvBadges();
+    auto *badges = getApp()->getSeventvBadges();
     switch (entitlement.kind)
     {
         case CosmeticKind::Badge: {
@@ -378,7 +386,7 @@ void SeventvEventAPI::onEntitlementCreate(
 void SeventvEventAPI::onEntitlementDelete(
     const EntitlementCreateDeleteDispatch &entitlement)
 {
-    auto *badges = getIApp()->getSeventvBadges();
+    auto *badges = getApp()->getSeventvBadges();
     switch (entitlement.kind)
     {
         case CosmeticKind::Badge: {

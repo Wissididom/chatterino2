@@ -5,7 +5,8 @@ option(CHATTERINO_TEST_USE_PUBLIC_HTTPBIN "Use public httpbin for testing networ
 set(test_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
     ${CMAKE_CURRENT_LIST_DIR}/resources/test-resources.qrc
-    ${CMAKE_CURRENT_LIST_DIR}/src/TestHelpers.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/Test.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/Test.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/ChannelChatters.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/AccessGuard.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/NetworkCommon.cpp
@@ -21,7 +22,7 @@ set(test_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/UtilTwitch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/IrcHelpers.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/TwitchPubSubClient.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/TwitchMessageBuilder.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/MessageBuilder.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/HighlightController.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/FormatTime.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/LimitedQueue.cpp
@@ -37,6 +38,16 @@ set(test_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/XDGHelper.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/Selection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/NotebookTab.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/SplitInput.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/LinkInfo.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/MessageLayout.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/QMagicEnum.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/ModerationAction.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/Scrollbar.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/Commands.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/FlagsEnum.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/MessageLayoutContainer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/CancellationToken.cpp
     # Add your new file above this line!
     )
 
@@ -72,5 +83,12 @@ set_target_properties(${PROJECT_NAME}
     PROPERTIES
     AUTORCC ON
     )
+
+if (CHATTERINO_STATIC_QT_BUILD)
+    qt_import_plugins(${PROJECT_NAME} INCLUDE_BY_TYPE
+        platforms Qt::QXcbIntegrationPlugin
+        Qt::QMinimalIntegrationPlugin
+    )
+endif ()
 
 gtest_discover_tests(${PROJECT_NAME})

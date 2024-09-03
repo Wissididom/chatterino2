@@ -28,7 +28,7 @@ void parseEmoji(const std::shared_ptr<EmojiData> &emojiData,
                 const rapidjson::Value &unparsedEmoji,
                 const QString &shortCode = {})
 {
-    std::vector<uint32_t> unicodeBytes{};
+    std::vector<char32_t> unicodeBytes{};
 
     struct {
         bool apple;
@@ -82,7 +82,7 @@ void parseEmoji(const std::shared_ptr<EmojiData> &emojiData,
     for (const QString &unicodeCharacter : unicodeCharacters)
     {
         bool ok{false};
-        unicodeBytes.push_back(QString(unicodeCharacter).toUInt(&ok, 16));
+        unicodeBytes.push_back(unicodeCharacter.toUInt(&ok, 16));
         if (!ok)
         {
             qCWarning(chatterinoEmoji)
@@ -92,14 +92,15 @@ void parseEmoji(const std::shared_ptr<EmojiData> &emojiData,
     }
 
     // We can safely do a narrowing static cast since unicodeBytes will never be a large number
-    emojiData->value = QString::fromUcs4(unicodeBytes.data(),
-                                         static_cast<int>(unicodeBytes.size()));
+    emojiData->value =
+        QString::fromUcs4(unicodeBytes.data(),
+                          static_cast<QString::size_type>(unicodeBytes.size()));
 
     if (!emojiData->nonQualifiedCode.isEmpty())
     {
         QStringList nonQualifiedCharacters =
             emojiData->nonQualifiedCode.toLower().split('-');
-        std::vector<uint32_t> nonQualifiedBytes{};
+        std::vector<char32_t> nonQualifiedBytes{};
         for (const QString &unicodeCharacter : nonQualifiedCharacters)
         {
             bool ok{false};
@@ -115,9 +116,9 @@ void parseEmoji(const std::shared_ptr<EmojiData> &emojiData,
         }
 
         // We can safely do a narrowing static cast since unicodeBytes will never be a large number
-        emojiData->nonQualified =
-            QString::fromUcs4(nonQualifiedBytes.data(),
-                              static_cast<int>(nonQualifiedBytes.size()));
+        emojiData->nonQualified = QString::fromUcs4(
+            nonQualifiedBytes.data(),
+            static_cast<QString::size_type>(nonQualifiedBytes.size()));
     }
 }
 
@@ -167,7 +168,7 @@ void Emojis::load()
 
 void Emojis::loadEmojis()
 {
-    // Current version: https://github.com/iamcal/emoji-data/blob/v14.0.0/emoji.json (Emoji version 14.0 (2022))
+    // Current version: https://github.com/iamcal/emoji-data/blob/v15.1.1/emoji.json (Emoji version 15.1 (2023))
     QFile file(":/emoji.json");
     file.open(QFile::ReadOnly);
     QTextStream s1(&file);
@@ -269,14 +270,15 @@ void Emojis::loadEmojiSet()
             };
             // clang-format on
 
+            // As of emoji-data v15.1.1, google is the only source missing no images.
             if (!emoji->capabilities.contains(emojiSetToUse))
             {
-                emojiSetToUse = "Twitter";
+                emojiSetToUse = "Google";
             }
 
             QString code = emoji->unifiedCode.toLower();
             QString urlPrefix =
-                "https://pajbot.com/static/emoji-v2/img/twitter/64/";
+                "https://pajbot.com/static/emoji-v2/img/google/64/";
             auto it = emojiSets.find(emojiSetToUse);
             if (it != emojiSets.end())
             {
@@ -284,7 +286,8 @@ void Emojis::loadEmojiSet()
             }
             QString url = urlPrefix + code + ".png";
             emoji->emote = std::make_shared<Emote>(Emote{
-                EmoteName{emoji->value}, ImageSet{Image::fromUrl({url}, 0.35)},
+                EmoteName{emoji->value},
+                ImageSet{Image::fromUrl({url}, 0.35, {64, 64})},
                 Tooltip{":" + emoji->shortCodes[0] + ":<br/>Emoji"}, Url{}});
         }
     });
@@ -296,7 +299,7 @@ std::vector<boost::variant<EmotePtr, QString>> Emojis::parse(
     auto result = std::vector<boost::variant<EmotePtr, QString>>();
     QString::size_type lastParsedEmojiEndIndex = 0;
 
-    for (auto i = 0; i < text.length(); ++i)
+    for (qsizetype i = 0; i < text.length(); ++i)
     {
         const QChar character = text.at(i);
 
@@ -398,7 +401,7 @@ QString Emojis::replaceShortCodes(const QString &text) const
     QString ret(text);
     auto it = this->findShortCodesRegex_.globalMatch(text);
 
-    int32_t offset = 0;
+    qsizetype offset = 0;
 
     while (it.hasNext())
     {

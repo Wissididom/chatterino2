@@ -183,7 +183,7 @@ void rebuildReplyThreadHighlight(Settings &settings,
 void rebuildMessageHighlights(Settings &settings,
                               std::vector<HighlightCheck> &checks)
 {
-    auto currentUser = getIApp()->getAccounts()->twitch.getCurrent();
+    auto currentUser = getApp()->getAccounts()->twitch.getCurrent();
     QString currentUsername = currentUser->getUserName();
 
     if (settings.enableSelfHighlight && !currentUsername.isEmpty() &&
@@ -213,6 +213,8 @@ void rebuildMessageHighlights(Settings &settings,
             settings.enableAutomodHighlightTaskbar.getValue();
         const auto highlightSoundUrlValue =
             settings.automodHighlightSoundUrl.getValue();
+        auto highlightColor =
+            ColorProvider::instance().color(ColorType::AutomodHighlight);
 
         checks.emplace_back(HighlightCheck{
             [=](const auto & /*args*/, const auto & /*badges*/,
@@ -234,7 +236,7 @@ void rebuildMessageHighlights(Settings &settings,
                     highlightAlert,     // alert
                     highlightSound,     // playSound
                     highlightSoundUrl,  // customSoundUrl
-                    nullptr,            // color
+                    highlightColor,     // color
                     false,              // showInMentions
                 };
             }});
@@ -440,9 +442,11 @@ std::ostream &operator<<(std::ostream &os, const HighlightResult &result)
     return os;
 }
 
-void HighlightController::initialize(Settings &settings,
-                                     const Paths & /*paths*/)
+HighlightController::HighlightController(Settings &settings,
+                                         AccountController *accounts)
 {
+    assert(accounts != nullptr);
+
     this->rebuildListener_.addSetting(settings.enableSelfHighlight);
     this->rebuildListener_.addSetting(settings.enableSelfHighlightSound);
     this->rebuildListener_.addSetting(settings.enableSelfHighlightTaskbar);
@@ -471,6 +475,7 @@ void HighlightController::initialize(Settings &settings,
     this->rebuildListener_.addSetting(settings.showThreadHighlightInMentions);
 
     this->rebuildListener_.addSetting(settings.enableAutomodHighlight);
+    this->rebuildListener_.addSetting(settings.showAutomodInMentions);
     this->rebuildListener_.addSetting(settings.enableAutomodHighlightSound);
     this->rebuildListener_.addSetting(settings.enableAutomodHighlightTaskbar);
     this->rebuildListener_.addSetting(settings.automodHighlightSoundUrl);
@@ -504,12 +509,12 @@ void HighlightController::initialize(Settings &settings,
             this->rebuildChecks(settings);
         });
 
-    getIApp()->getAccounts()->twitch.currentUserChanged.connect(
-        [this, &settings] {
+    this->bConnections.emplace_back(
+        accounts->twitch.currentUserChanged.connect([this, &settings] {
             qCDebug(chatterinoHighlights)
                 << "Rebuild checks because user swapped accounts";
             this->rebuildChecks(settings);
-        });
+        }));
 
     this->rebuildChecks(settings);
 }
@@ -547,7 +552,7 @@ std::pair<bool, HighlightResult> HighlightController::check(
     // Access for checking
     const auto checks = this->checks_.accessConst();
 
-    auto currentUser = getIApp()->getAccounts()->twitch.getCurrent();
+    auto currentUser = getApp()->getAccounts()->twitch.getCurrent();
     auto self = (senderName == currentUser->getUserName());
 
     for (const auto &check : *checks)
