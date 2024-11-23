@@ -69,6 +69,13 @@ enum class ChatSendProtocol : int {
     Helix = 2,
 };
 
+enum class ShowModerationState : int {
+    // Always show this moderation-related item
+    Always = 0,
+    // Never show this moderation-related item
+    Never = 1,
+};
+
 enum StreamerModeSetting {
     Disabled = 0,
     Enabled = 1,
@@ -183,6 +190,18 @@ public:
     // BoolSetting useCustomWindowFrame = {"/appearance/useCustomWindowFrame",
     // false};
 
+    IntSetting overlayBackgroundOpacity = {
+        "/appearance/overlay/backgroundOpacity", 50};
+    BoolSetting enableOverlayShadow = {"/appearance/overlay/shadow", true};
+    IntSetting overlayShadowOpacity = {"/appearance/overlay/shadowOpacity",
+                                       255};
+    QStringSetting overlayShadowColor = {"/appearance/overlay/shadowColor",
+                                         "#000"};
+    // These should be floats, but there's no good input UI for them
+    IntSetting overlayShadowOffsetX = {"/appearance/overlay/shadowOffsetX", 2};
+    IntSetting overlayShadowOffsetY = {"/appearance/overlay/shadowOffsetY", 2};
+    IntSetting overlayShadowRadius = {"/appearance/overlay/shadowRadius", 8};
+
     // Badges
     BoolSetting showBadgesGlobalAuthority = {
         "/appearance/badges/GlobalAuthority", true};
@@ -200,6 +219,10 @@ public:
     BoolSetting useCustomFfzVipBadges = {
         "/appearance/badges/useCustomFfzVipBadges", true};
     BoolSetting showBadgesSevenTV = {"/appearance/badges/seventv", true};
+    QSizeSetting lastPopupSize = {
+        "/appearance/lastPopup/size",
+        {300, 500},
+    };
 
     /// Behaviour
     BoolSetting allowDuplicateMessages = {"/behaviour/allowDuplicateMessages",
@@ -329,6 +352,10 @@ public:
     IntSetting timeoutStackStyle = {
         "/moderation/timeoutStackStyle",
         static_cast<int>(TimeoutStackStyle::Default)};
+    EnumStringSetting<ShowModerationState> showBlockedTermAutomodMessages = {
+        "/moderation/showBlockedTermAutomodMessages",
+        ShowModerationState::Always,
+    };
 
     /// Highlighting
     //    BoolSetting enableHighlights = {"/highlighting/enabled", true};
@@ -523,6 +550,7 @@ public:
 
     IntSetting startUpNotification = {"/misc/startUpNotification", 0};
     QStringSetting currentVersion = {"/misc/currentVersion", ""};
+    IntSetting overlayKnowledgeLevel = {"/misc/overlayKnowledgeLevel", 0};
 
     BoolSetting loadTwitchMessageHistoryOnConnect = {
         "/misc/twitch/loadMessageHistoryOnConnect", true};
@@ -555,6 +583,7 @@ public:
     BoolSetting informOnTabVisibilityToggle = {"/misc/askOnTabVisibilityToggle",
                                                true};
     BoolSetting lockNotebookLayout = {"/misc/lockNotebookLayout", false};
+    BoolSetting showPronouns = {"/misc/showPronouns", false};
 
     /// UI
 

@@ -115,12 +115,13 @@ auto makeEmojiMessage(const std::vector<EmojiPtr> &emojiMap)
     return builder.release();
 }
 
-void addEmotes(Channel &channel, auto emotes, const QString &title,
+void addEmotes(Channel &channel, auto &&emotes, const QString &title,
                const MessageElementFlag &emoteFlag)
 {
     channel.addMessage(makeTitleMessage(title), MessageContext::Original);
-    channel.addMessage(makeEmoteMessage(emotes, emoteFlag),
-                       MessageContext::Original);
+    channel.addMessage(
+        makeEmoteMessage(std::forward<decltype(emotes)>(emotes), emoteFlag),
+        MessageContext::Original);
 }
 
 void addTwitchEmoteSets(const std::shared_ptr<const EmoteMap> &local,
@@ -135,25 +136,32 @@ void addTwitchEmoteSets(const std::shared_ptr<const EmoteMap> &local,
                   MessageElementFlag::TwitchEmote);
     }
 
-    // Put current channel emotes at the top
+    std::vector<
+        std::pair<QString, std::reference_wrapper<const TwitchEmoteSet>>>
+        sortedSets;
+    sortedSets.reserve(sets->size());
     for (const auto &[_id, set] : *sets)
     {
         if (set.owner->id == currentChannelID)
         {
+            // Put current channel emotes at the top
             addEmotes(subChannel, set.emotes, set.title(),
                       MessageElementFlag::TwitchEmote);
         }
+        else
+        {
+            sortedSets.emplace_back(set.title(), std::cref(set));
+        }
     }
 
-    for (const auto &[id, set] : *sets)
-    {
-        if (set.owner->id == currentChannelID)
-        {
-            continue;
-        }
+    std::ranges::sort(sortedSets, [](const auto &a, const auto &b) {
+        return a.first.compare(b.first, Qt::CaseInsensitive) < 0;
+    });
 
-        addEmotes(set.isSubLike ? subChannel : globalChannel, set.emotes,
-                  set.title(), MessageElementFlag::TwitchEmote);
+    for (const auto &[title, set] : sortedSets)
+    {
+        addEmotes(set.get().isSubLike ? subChannel : globalChannel,
+                  set.get().emotes, title, MessageElementFlag::TwitchEmote);
     }
 }
 
@@ -175,7 +183,7 @@ void loadEmojis(Channel &channel, const std::vector<EmojiPtr> &emojiMap,
 
 // Create an emote
 EmoteMap filterEmoteMap(const QString &text,
-                        std::shared_ptr<const EmoteMap> emotes)
+                        const std::shared_ptr<const EmoteMap> &emotes)
 {
     EmoteMap filteredMap;
 
@@ -518,15 +526,19 @@ void EmotePopup::filterTwitchEmotes(std::shared_ptr<Channel> searchChannel,
         if (!local.empty())
         {
             addEmotes(*searchChannel, local,
-                      this->twitchChannel_->getName() % u" (local)",
+                      this->twitchChannel_->getName() % u" (Follower)",
                       MessageElementFlag::TwitchEmote);
         }
 
         for (const auto &[_id, set] :
              **getApp()->getAccounts()->twitch.getCurrent()->accessEmoteSets())
         {
-            addEmotes(*searchChannel, filterEmoteVec(searchText, set.emotes),
-                      set.title(), MessageElementFlag::TwitchEmote);
+            auto filtered = filterEmoteVec(searchText, set.emotes);
+            if (!filtered.empty())
+            {
+                addEmotes(*searchChannel, std::move(filtered), set.title(),
+                          MessageElementFlag::TwitchEmote);
+            }
         }
     }
 

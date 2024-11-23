@@ -132,14 +132,14 @@ bool shouldSendHelixChat()
 {
     switch (getSettings()->chatSendProtocol)
     {
+        case ChatSendProtocol::Default:
         case ChatSendProtocol::Helix:
             return true;
-        case ChatSendProtocol::Default:
         case ChatSendProtocol::IRC:
             return false;
         default:
             assert(false && "Invalid chat protocol value");
-            return false;
+            return true;
     }
 }
 
@@ -312,7 +312,7 @@ void TwitchIrcServer::initialize()
             postToThread([chan, action] {
                 MessageBuilder msg(action);
                 msg->flags.set(MessageFlag::PubSub);
-                chan->addOrReplaceTimeout(msg.release());
+                chan->addOrReplaceTimeout(msg.release(), QTime::currentTime());
             });
         });
 
@@ -494,6 +494,7 @@ void TwitchIrcServer::initialize()
 
                         action.msgID = msg.messageID;
                         action.message = msg.messageText;
+                        action.reasonCode = msg.reason;
 
                         // this message also contains per-word automod data, which could be implemented
 
@@ -580,8 +581,12 @@ void TwitchIrcServer::initialize()
                             }
                         });
                     }
-                    // "ALLOWED" and "DENIED" statuses remain unimplemented
-                    // They are versions of automod_message_(denied|approved) but for mods.
+                    else
+                    {
+                        // Gray out approve/deny button upon "ALLOWED" and "DENIED" statuses
+                        // They are versions of automod_message_(denied|approved) but for mods.
+                        chan->deleteMessage("automod_" + msg.messageID);
+                    }
                 }
                 break;
 
@@ -629,7 +634,6 @@ void TwitchIrcServer::initialize()
             postToThread([chan, msg] {
                 chan->addMessage(msg, MessageContext::Original);
             });
-            chan->deleteMessage(msg->id);
         });
 
     this->connections_.managedConnect(

@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <vector>
 
+class QJsonObject;
+
 namespace chatterino {
 class MessageElement;
 class MessageThread;
@@ -20,6 +22,7 @@ class ScrollbarHighlight;
 
 struct Message;
 using MessagePtr = std::shared_ptr<const Message>;
+using MessagePtrMut = std::shared_ptr<Message>;
 struct Message {
     Message();
     ~Message();
@@ -62,6 +65,8 @@ struct Message {
     ScrollbarHighlight getScrollBarHighlight() const;
 
     std::shared_ptr<ChannelPointReward> reward = nullptr;
+
+    QJsonObject toJson() const;
 };
 
 }  // namespace chatterino

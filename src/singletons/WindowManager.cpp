@@ -16,6 +16,7 @@
 #include "widgets/FramelessEmbedWindow.hpp"
 #include "widgets/helper/NotebookTab.hpp"
 #include "widgets/Notebook.hpp"
+#include "widgets/OverlayWindow.hpp"
 #include "widgets/splits/Split.hpp"
 #include "widgets/splits/SplitContainer.hpp"
 #include "widgets/Window.hpp"
@@ -139,6 +140,8 @@ WindowManager::WindowManager(const Paths &paths, Settings &settings,
     this->forceLayoutChannelViewsListener.add(settings.enableRedeemedHighlight);
     this->forceLayoutChannelViewsListener.add(settings.colorUsernames);
     this->forceLayoutChannelViewsListener.add(settings.boldUsernames);
+    this->forceLayoutChannelViewsListener.add(
+        settings.showBlockedTermAutomodMessages);
 
     this->layoutChannelViewsListener.add(settings.timestampFormat);
     this->layoutChannelViewsListener.add(fonts.fontChanged);
@@ -194,6 +197,7 @@ void WindowManager::updateWordTypeMask()
     flags.set(settings->animateEmotes ? MEF::BitsAnimated : MEF::BitsStatic);
 
     // badges
+    flags.set(MEF::BadgeSharedChannel);
     flags.set(settings->showBadgesGlobalAuthority ? MEF::BadgeGlobalAuthority
                                                   : MEF::None);
     flags.set(settings->showBadgesPredictions ? MEF::BadgePredictions
@@ -542,6 +546,37 @@ void WindowManager::queueSave()
     using namespace std::chrono_literals;
 
     this->saveTimer->start(10s);
+}
+
+void WindowManager::toggleAllOverlayInertia()
+{
+    // check if any window is not inert
+    bool anyNonInert = false;
+    for (auto *window : this->windows_)
+    {
+        if (anyNonInert)
+        {
+            break;
+        }
+        window->getNotebook().forEachSplit([&](auto *split) {
+            auto *overlay = split->overlayWindow();
+            if (overlay)
+            {
+                anyNonInert = anyNonInert || !overlay->isInert();
+            }
+        });
+    }
+
+    for (auto *window : this->windows_)
+    {
+        window->getNotebook().forEachSplit([&](auto *split) {
+            auto *overlay = split->overlayWindow();
+            if (overlay)
+            {
+                overlay->setInert(anyNonInert);
+            }
+        });
+    }
 }
 
 void WindowManager::encodeTab(SplitContainer *tab, bool isSelected,
