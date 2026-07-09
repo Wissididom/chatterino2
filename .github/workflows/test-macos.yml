@@ -68,6 +68,11 @@ jobs:
               ..
           make VERBOSE=1 -j"$(sysctl -n hw.logicalcpu)"
 
+      - name: Dump test link command
+        if: always()
+        run: |
+          cat build-test/tests/CMakeFiles/chatterino-test.dir/link.txt
+
       - name: Download and extract Twitch PubSub Server Test
         run: |
           mkdir pubsub-server-test
