@@ -342,6 +342,11 @@ jobs:
           make VERBOSE=1 -j"$(sysctl -n hw.logicalcpu)"
         shell: bash
 
+      - name: Dump test link command
+        if: always()
+        run: |
+          cat build-test/tests/CMakeFiles/chatterino-test.dir/link.txt
+
       - name: Package (MacOS)
         if: startsWith(matrix.os, 'macos')
         env:
