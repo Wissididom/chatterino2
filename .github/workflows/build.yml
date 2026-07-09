@@ -147,7 +147,7 @@ jobs:
       matrix:
         include:
           # macOS
-          - os: macos-15
+          - os: macos-26
             qt-version: 6.11.1
             force-lto: false
             skip-artifact: false
@@ -339,7 +339,7 @@ jobs:
               -DCHATTERINO_NIGHTLY_BUILD=${{ steps.build-type.outputs.NIGHTLY_BUILD }} \
               -DCHATTERINO_SPELLCHECK=On \
               ..
-          make -j"$(sysctl -n hw.logicalcpu)"
+          make VERBOSE=1 -j"$(sysctl -n hw.logicalcpu)"
         shell: bash
 
       - name: Package (MacOS)
